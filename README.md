@@ -52,6 +52,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 ## 📐 System Data Flow
 
 ```mermaid
+
 graph LR
     %% 1. Sensing Layer
     subgraph SENSOR [Node 1: Sensor]
@@ -94,7 +95,8 @@ graph LR
     style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
     style DASH fill:#e8f5e9,stroke:#2e7d32
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
-```mermaid
+
+```
 
 ---
 
