@@ -4,20 +4,18 @@ volumes:
   influxdb-data:
   grafana-data:
   readsb-data:
-  mosquitto-data: # Added for MQTT persistence (optional but good practice)
+  # mosquitto-data: # Commented out temporarily
 
 services:
   # ============================================================================
-  # 1. MQTT BROKER (New - Required for Alerts)
+  # 1. MQTT BROKER (REMOVED TEMPORARILY)
   # ============================================================================
-  mqtt:
-    image: eclipse-mosquitto:latest
-    network_mode: host
-    restart: always
-    volumes:
-      - mosquitto-data:/mosquitto/data
-      # If you have a custom config, uncomment below:
-      # - ./mosquitto/config:/mosquitto/config
+  # mqtt:
+  #   image: eclipse-mosquitto:latest
+  #   network_mode: host
+  #   restart: always
+  #   volumes:
+  #     - mosquitto-data:/mosquitto/data
 
   # ============================================================================
   # 2. AGGREGATOR (ReadsB - Net Only)
