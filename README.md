@@ -1,100 +1,49 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 # Secure Skies: ADS-B Integrity & Spoofing Detection
 
-![Status](https://img.shields.io/badge/Status-Data_Ingestion-green?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.9-yellow?style=flat-square)
 
-**Location:** HEL-ARN Corridor (Focus: EFHK)
+**Location:** HEL-ARN Corridor (Focus: EFHK)  
 **Author:** RW
 
 ## 📖 Project Overview
 **Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
 
-**Goal:** Train a Sequence Model (LSTM/RNN) to predict flight anomalies by learning the physics of valid trajectories vs. synthetic spoofing attacks.
+**Goal:** Detect flight anomalies in real-time by comparing local RF data against global "truth" networks and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
 
 ---
 
-## 🔭 Hardware Setup
-This project uses a distributed "Sensor & Brain" architecture to ensure maximum signal fidelity.
+## 🔭 Hardware Architecture
+This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
 ### 📡 Node 1: The Sensor (RPi 4)
+* **IP:** 192.168.1.152
 * **Role:** Dedicated Signal Capture (SIGINT).
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
-* **Advantage:** High-altitude placement guarantees direct **Line-of-Sight (LoS)** to aircraft, resulting in high-quality, uninterrupted signal packets essential for training ML models.
+* **Function:** Decodes raw 1090MHz RF signals into Beast binary format and streams it over TCP. No local processing to minimize noise.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
-* **Role:** Compute, Logic & Storage.
-* **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe + PoE + Hailo-8L AI Accelerator.
-* **Advantage:** High-speed I/O allows for real-time physics calculations and database writes without dropping RF packets.
+* **IP:** 192.168.1.134
+* **Role:** Aggregation, Logic & AI.
+* **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
+* **Function:**
+    * Ingests stream from Node 1.
+    * Runs **Watchdog 2.0** (Anomaly Detection).
+    * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
+    * Detects "Ghost Planes" via OpenSky Network cross-referencing.
 
 ---
 
-## 📐 System Data Flow
+## 🗺️ Receiver Coverage
 
-```mermaid
-graph LR
-    %% 1. Sensing Layer (RPi 4)
-    subgraph SENSOR [Node 1: Forward Sensor]
-        AIR((RF Signals)) --> ANT[Antenna]
-        ANT --> SDR[RTL-SDR]
-        SDR --> READSB[Signal Decoder]
-    end
+![Receiver Coverage Map](coverage-map.jpg)
 
-    %% 2. Intelligence Layer (RPi 5)
-    subgraph BRAIN [Node 2: Central Brain]
-        READSB -->|JSON Stream| TRACKER[Runway Tracker]
-        READSB -->|JSON Stream| SPOOF[Spoof Detector]
-        READSB -->|JSON Stream| GUARD[Physics Guard]
-        
-        TRACKER -->|Events| DB[(Flight DB)]
-        SPOOF -->|Anomalies| DB
-        GUARD -->|Alerts| DB
-        
-        SPOOF -.->|Trigger| ALERT[Alert System]
-    end
+*Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846)*
 
-    %% 3. Validation Layer (Cloud)
-    subgraph CLOUD [External Reference]
-        OPENSKY[OpenSky Network]
-    end
-
-    %% 4. Viz Layer
-    OPENSKY -->|Comparison Data| SPOOF
-    DB --> DASH[Grafana Dashboard]
-
-    %% Styling
-    style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
-    style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style TRACKER fill:#fff,stroke:#333
-    style SPOOF fill:#fff,stroke:#333
-    style GUARD fill:#fff,stroke:#333
-```
-
----
-
-## ✈️ Runway Logic & Thresholds
-The core of the data labeling engine is the **Runway Tracker**. To distinguish a "Landing" from a low-altitude flyover, we define runways as vector pairs (**Start Threshold** $\to$ **End Stop**).
-
-**Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/001-2023_2023_01_26/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
-
-### The Python Logic
-A flight is classified based on its kinematic relationship to the specific runway geometry:
-
-1.  **Landing Detection:**
-    * **Geofence:** Aircraft is < 10km from the *Start* threshold.
-    * **Vector Logic:** Aircraft is closer to *Start* than *End* (approaching).
-    * **Vertical Rate:** Descending (> 100 ft/min).
-    * **High Confidence:** If distance < 6km, the probability of intent is near 100%.
-
-2.  **Takeoff Detection:**
-    * **Geofence:** Aircraft is between *Start* and *End* (on the strip) OR just past *End*.
-    * **Vector Logic:** Distance to *End* < Distance to *Start*.
-    * **Vertical Rate:** Climbing (> 100 ft/min).
+This map plots the range of the receiver. The dotted lines represent the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet taking into account obstructions from terrain.
 
 ---
 
@@ -110,39 +59,97 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 📂 Repository Structure
-```text
-.
-├── docker-compose.yml          # Orchestration
-├── physics-guard               # Logic: Detects kinematic anomalies (Impossible Velocity)
-│   ├── Dockerfile
-│   ├── guard.py
-│   └── requirements.txt
-├── runway-tracker              # Logic: Geofencing & ML Labeling
-│   ├── Dockerfile
-│   └── src
-│       └── main.py
-└── spoof-detector              # Logic: OpenSky Cross-referencing
-    ├── Dockerfile
-    ├── requirements.txt
-    └── watchdog.py
+## 📐 System Data Flow
+
+```mermaid
+graph LR
+    %% 1. Sensing Layer (RPi 4)
+    subgraph SENSOR [Node 1: Forward Sensor]
+        AIR((RF Signals)) --> ANT[Antenna]
+        ANT --> SDR[RTL-SDR]
+        SDR --> FEEDER[Readsb Feeder]
+    end
+
+    %% 2. Intelligence Layer (RPi 5)
+    subgraph BRAIN [Node 2: Central Brain]
+        FEEDER -->|TCP Port 30005| AGG[Readsb Aggregator]
+        AGG -->|JSON API| WATCH[Watchdog 2.0]
+        
+        WATCH -->|Metrics| DB[(InfluxDB)]
+        WATCH -->|Alerts| MQTT[MQTT Broker]
+        
+        subgraph AI_MODULES [Logic Engines]
+            WATCH --> TRACK[Runway Tracker]
+            WATCH --> GUARD[Physics Guard]
+            WATCH --> SPOOF[Spoof Detector]
+        end
+    end
+
+    %% 3. Validation Layer (Cloud)
+    subgraph CLOUD [External Truth]
+        OPENSKY[OpenSky Network]
+    end
+
+    %% 4. Viz Layer
+    OPENSKY -.->|Validation| SPOOF
+    DB --> DASH[Grafana Dashboard]
+
+    %% Styling
+    style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
+    style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+    style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---
 
-## 📚 Acknowledgements & References
-This project builds upon open-source research and existing Balena blocks.
+## 🛡️ Security Modules (Watchdog 2.0)
 
-* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file) - Excellent foundation for containerized SDR.
-* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network) - We utilize their API for ground-truth verification.
-* **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/) - The standard for low-cost radio analysis.
-* **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
+The core logic is handled by the ```spoof-detector``` container, which runs three parallel threads:
+
+1.  **Runway Logic:**
+    * Detects if a plane is aligned with EFHK runways (22L/04R, 22R/04L, 15/33).
+    * Identifies **Go-Arounds** (Low altitude + High positive vertical rate).
+    * Identifies **Rejected Takeoffs** (High speed on ground -> Zero speed).
+
+2.  **Spoof Detection:**
+    * **Distance Check:** Compares local RPi4 signal position vs. OpenSky Network global position.
+    * **Threshold:** If discrepancy > 2.0 km, the target is flagged as a potential spoofer.
+
+3.  **Physics Guard:**
+    * Monitors for "Impossible Kinematics" (e.g., speed > 1,225 km/h ([Mach 1](https://en.wikipedia.org/wiki/Mach_number))).
+
+---
+
+## 📂 Repository Structure
+```text
+.
+├── coverage-map.jpg            # Coverage visualization
+├── docker-compose.yml          # Service Orchestration
+├── spoof-detector              # Watchdog 2.0 (The Brain)
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── watchdog.py             # Main Logic (Threaded)
+├── physics-guard               # (Legacy) Standalone Physics Module
+│   └── guard.py
+└── runway-tracker              # (Legacy) Standalone ML Labeler
+    └── src/
+```
 
 ---
 
 ## 🛠 Deployment
+
 ```bash
-balena push <app-name>
+# 1. Clone the repo
+git clone [https://github.com/rwiren/central-brain.git](https://github.com/rwiren/central-brain.git)
+
+# 2. Set Env Variables in Balena Dashboard
+# LAT, LON, OPENSKY_USER, OPENSKY_PASS
+
+# 3. Deploy
+balena push central
 ```
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
