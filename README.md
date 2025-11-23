@@ -3,10 +3,10 @@
 ![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.9-yellow?style=flat-square)
-![Last Updated](https://img.shields.io/badge/Last%20Updated-2025--11--23-orange?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
+![Last Updated](https://img.shields.io/badge/Last%20Updated-2025--11--24-orange?style=flat-square)
 
-**Location:** HEL-ARN Corridor (Focus: EFHK)  
+**Location:** HEL-ARN Corridor (Focus: EFHK)  
 **Author:** RW
 
 ---
@@ -25,95 +25,55 @@
 ## 📖 Project Overview
 **Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
 
-**Goal:** Detect flight anomalies in real-time by comparing local RF data against global reference networks and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
+**Goal:** Detect flight anomalies in real-time by comparing local RF data against global reference networks (OpenSky) and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
 
 ---
 
 ## 🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
-### 📡 Node 1: The Sensor (RPi 4)
-* **Role:** Dedicated Signal Capture (SIGINT).
+### 📡 Node 1: The Sensor (RPi 4 @ 192.168.1.152)
+* **Role:** Dedicated Signal Capture and JSON Server.
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
-* **Function:** Decodes raw 1090MHz RF signals into Beast binary format and streams it over TCP. No local processing to minimize noise.
+* **Function:** Decodes raw 1090MHz RF signals, generates the `aircraft.json` web data, and serves the data over the network.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
-* **Role:** Aggregation, Logic & AI.
+* **Role:** Aggregation, Logic, Analytics & OAuth2 Handler.
 * **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
 * **Function:**
-    * Ingests stream from Node 1.
+    * Ingests Beast stream from Node 1 (via RPi5's `readsb` service).
     * Runs **Watchdog 2.0** (Anomaly Detection).
     * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
-    * Detects "Ghost Planes" via OpenSky Network cross-referencing.
+    * **OAuth2 Integration:** Implements the OAuth2 Client Credentials Flow to reliably fetch global truth data from OpenSky.
 
 ---
 
-## 📐 System Data Flow
+## 📐 System Data Flow (Operational Architecture)
 
-```mermaid
-graph LR
-    %% 1. Sensing Layer
-    subgraph SENSOR [Node 1: Sensor]
-        AIR((RF Signals)) --> ANT[Antenna]
-        ANT --> SDR[RTL-SDR]
-        SDR --> FEEDER[Readsb Feeder]
-    end
+The final architecture uses the RPi4 as the stable JSON source and implements the mandatory **OAuth2 Client Credentials Flow** for OpenSky.
 
-    %% 2. Intelligence Layer
-    subgraph BRAIN [Node 2: Central Brain]
-        FEEDER -->|TCP Stream| AGG[Readsb Aggregator]
-        AGG -->|JSON API| WD[Watchdog Script]
-        
-        %% Logic Flow
-        subgraph LOGIC [Logic Engines]
-            WD -.-> TRACK[Runway Tracker]
-            WD -.-> PHYS[Physics Guard]
-            WD -.-> SPOOF[Spoof Detector]
-        end
-
-        %% Actions / Outputs
-        TRACK -->|Events| DB[(InfluxDB)]
-        PHYS -->|Alerts| MQTT[MQTT Broker]
-        SPOOF -->|Alerts| MQTT
-        SPOOF -->|Metrics| DB
-    end
-
-    %% 3. Reference Layer
-    subgraph REF [External Reference]
-        OS[OpenSky Network]
-    end
-
-    %% 4. Visualization
-    OS -.->|HTTP Check| SPOOF
-    DB --> DASH[Grafana Dashboard]
-
-    %% Styling
-    style SENSOR fill:#f9f9f9,stroke:#666
-    style BRAIN fill:#e3f2fd,stroke:#1565c0
-    style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style DASH fill:#e8f5e9,stroke:#2e7d32
-    style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
-```
+| Data Stream | Source | Target Database/Service | Status |
+| :--- | :--- | :--- | :--- |
+| **Local Aircraft Position** | `http://192.168.1.152:8080/data/aircraft.json` | InfluxDB (`local_aircraft_state`) | 🟢 **Stable** |
+| **Local Receiver Stats** | `http://192.168.1.152:8080/data/stats.json` | InfluxDB (`local_performance`) | 🟢 **Stable** |
+| **Global Truth Data** | OpenSky OAuth2 API | InfluxDB (`global_aircraft_state`) | 🟢 **Stable (Token Flow)** |
 
 ---
 
 ## 🛡️ Security Modules (Watchdog 2.0)
 
-The core logic is handled by the ```spoof-detector``` container, which runs three parallel threads:
+The core logic is handled by the `spoof-detector` container, which compares local kinematic data against the global truth stream.
 
-1.  **Runway Logic:**
-    * **Goal:** Distinguish landings from low-altitude flyovers.
-    * **Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/005-2025_2025_10_02/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
-    * **Logic:** Detects alignment with runways 22L/04R, 22R/04L, 15/33 based on vector geometry.
+1.  **Go-Around/Physics:** Continuously monitors local data for sudden, impossible shifts in altitude and vertical rate.
+2.  **Spoof Detection:** Compares the `local\_aircraft\_state` position against the `global\_aircraft\_state` position (both filtered by ICAO24 address).
+    * **Threshold:** If the physical distance between the two sources exceeds 2.0 km, an alert is triggered.
 
-2.  **Spoof Detection:**
-    * **Distance Check:** Compares local RPi4 signal position vs. OpenSky Network global position.
-    * **Threshold:** If discrepancy > 2.0 km, the target is flagged as a potential spoofer.
+---
 
-3.  **Physics Guard:**
-    * **Goal:** Filter out synthetic "ghost" data that violates physics.
-    * **Thresholds:** Monitors for kinematics impossible for civilian traffic (e.g., a commercial jet or Cessna flying > 1,225 km/h ([Mach 1](https://en.wikipedia.org/wiki/Mach_number))).
+## 📘 Data Dictionary & Schema
+
+The definitive, current database schema is defined in [DATA_DICTIONARY.md](DATA_DICTIONARY.md). The three primary time-series measurements written by the `adsb-feeders` service are: `local\_performance`, `local\_aircraft\_state`, and `global\_aircraft\_state`.
 
 ---
 
@@ -137,82 +97,14 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 📘 Data Dictionary & System Architecture
-
-This section defines the data types, sources, and storage schemas used in the Central Brain.
-
-### 1. Data Sources (Inputs)
-* **Local Sensor Data:** Raw Beast Binary (Port 30005) from RPi4. Unencrypted ADS-B broadcasts (Mode S).
-* **External Reference:** OpenSky Network API. Used to cross-reference local data and detect anomalies.
-
-### 2. Database Schema (InfluxDB)
-All time-series data is stored in the `readsb` database.
-
-#### ✈️ Measurement: `flight_ops`
-*Stores the processed logic and behavior analysis for each aircraft.*
-
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| **`lat`, `lon`** | Float | Aircraft Position (WGS84). |
-| **`alt_ft`** | Integer | Barometric Altitude (Feet). |
-| **`speed_kts`** | Integer | Ground Speed (Knots). |
-| **`vertical_rate`** | Integer | Rate of Climb/Descent (ft/min). |
-| **`bearing_deg`** | Float | Ground track (Heading). |
-| **`distance_km`** | Float | Calculated distance from *your* sensor. |
-| **`is_spoofed`** | Boolean | **1** = Anomaly detected (Mismatch/Physics violation). |
-| **`event_score`** | Integer | Severity of the detected anomaly. |
-
-#### 📡 Measurement: `readsb` (System Stats)
-*Stores health metrics: `messages` (msg/sec), `tracks_with_position`, `cpu_background`.*
-
-### 3. Alerting Data (MQTT)
-Critical events (Spoofing, Go-Around) are published to `aviation/alerts`.
-
-```json
-{
-  "type": "GO-AROUND",
-  "timestamp": "2025-11-23T14:30:00Z",
-  "details": "FIN123 at 22L (Alt: 1500ft, V-Rate: +2000fpm)"
-}
-```
-
----
-
-## 📂 Repository Structure
-```text
-.
-├── assets/                     # Images & diagrams
-├── docker-compose.yml          # Service Orchestration
-├── spoof-detector              # Watchdog 2.0 (The Brain)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── watchdog.py             # Main Logic (Threaded)
-├── physics-guard               # (Reference) Original standalone logic
-│   └── guard.py
-└── runway-tracker              # (Reference) Original standalone logic
-    └── src/
-```
-
----
-
-## 📚 Acknowledgements & References
-* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file)
-* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network)
-* **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
-* **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
-
----
-
 ## 🛠 Deployment
 
-```bash
-# 1. Clone the repo
-git clone [https://github.com/rwiren/central-brain.git](https://github.com/rwiren/central-brain.git)
+1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
+    * `LAT`, `LON`, `INFLUX\_USER`, `INFLUX\_PASSWORD`, `GRAFANA\_PASSWORD`
+    * **OAuth2 Credentials:** `OPENSKY\_CLIENT\_ID` and `OPENSKY\_CLIENT\_SECRET` (Mandatory for API access).
 
-# 2. Set Env Variables in Balena Dashboard
-# LAT, LON, OPENSKY_USER, OPENSKY_PASS
-
-# 3. Deploy
+2.  **Deployment:** Push the current repository to your Balena application.
+    ```bash
 balena push central
 ```
 

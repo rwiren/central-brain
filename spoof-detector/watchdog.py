@@ -4,28 +4,31 @@ import json
 import os
 import requests
 import math
-import paho.mqtt.client as mqtt
 from geopy.distance import geodesic
 from datetime import datetime
 from collections import deque
+import paho.mqtt.client as mqtt
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
 
 # 1. Environment Variables (Dynamic)
-# We use the variables set in docker-compose
+# MY_LAT/MY_LON are read from Balena environment variables ($LAT/$LON)
 MY_LAT = float(os.getenv("MY_LAT", 60.3172))  # Vantaa default
-MY_LON = float(os.getenv("MY_LON", 24.9633))
+MY_LON = float(os.getenv("LON", 24.9633))
 
 # 2. Data Sources
-# We use the robust JSON API from the local container
-LOCAL_READSB_URL = os.getenv("LOCAL_READSB_URL", "http://127.0.0.1:8080/data/aircraft.json")
+# FIXED: Targets RPi4's actual IP address for JSON source (solves 404 errors)
+LOCAL_READSB_URL = "http://192.168.1.152:8080/data/aircraft.json"
 OPENSKY_API_URL = "https://opensky-network.org/api/states/all"
-OPENSKY_USER = os.getenv("OPENSKY_USER", None)
-OPENSKY_PASS = os.getenv("OPENSKY_PASS", None)
+# FIXED: Using Client ID/Secret for real-time watchdog auth
+OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", None)
+OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", None)
+OPENSKY_AUTH_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 # 3. MQTT Config (Optional)
+# 127.0.0.1 is correct for host network mode
 MQTT_BROKER = os.getenv("MQTT_BROKER", "127.0.0.1")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC_ALERTS = "aviation/alerts"
@@ -39,11 +42,18 @@ RUNWAYS = {
 
 # 5. Global State
 current_state = {
-    "local": {},   # Data from RPi4 via Readsb
+    "local": {},  # Data from RPi4 via Readsb
     "opensky": {}, # Data from OpenSky Network
     "history": {}  # For Go-Around detection
 }
 state_lock = threading.Lock()
+
+# Global variable to hold the token and its expiration time (local to watchdog)
+auth_token_watchdog = {
+    "token": None,
+    "expires_at": 0
+}
+TOKEN_LIFETIME = 300 # Token is typically valid for 300 seconds
 
 # ==========================================
 # HELPER FUNCTIONS
@@ -51,15 +61,14 @@ state_lock = threading.Lock()
 
 def identify_runway(lat, lon, heading, alt_ft):
     """Identifies if a plane is aligned with a known runway."""
-    # Simple distance check to EFHK (Helsinki Vantaa)
-    # 60.3172, 24.9633 is approx center
     plane_pos = (lat, lon)
-    airport_pos = (60.3172, 24.9633) 
+    airport_pos = (60.3172, 24.9633)
     
     try:
         dist_km = geodesic(plane_pos, airport_pos).km
         if dist_km < 10 and alt_ft < 3000:
             for rwy, (min_h, max_h) in RUNWAYS.items():
+                # Correctly check if heading falls within the runway band
                 if min_h <= heading <= max_h:
                     return rwy
     except:
@@ -95,38 +104,96 @@ except:
     print("[System] MQTT Disabled or Unreachable (Running in Console Mode)")
 
 # ==========================================
+# OPENSKY OAUTH HANDLER (Internal to Watchdog)
+# ==========================================
+def get_opensky_token_watchdog():
+    """Requests a new OAuth2 Bearer Token for the watchdog."""
+    global auth_token_watchdog
+
+    # Check if current token is still valid
+    if auth_token_watchdog["token"] and time.time() < auth_token_watchdog["expires_at"]:
+        return auth_token_watchdog["token"]
+
+    if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
+        print("[OpenSky] FATAL: Missing OPENSKY_CLIENT_ID/SECRET for watchdog.")
+        return None
+
+    try:
+        response = requests.post(
+            OPENSKY_AUTH_URL,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": OPENSKY_CLIENT_ID,
+                "client_secret": OPENSKY_CLIENT_SECRET
+            },
+            timeout=5
+        )
+        response.raise_for_status() # Raise exception for 4xx/5xx errors
+        data = response.json()
+        
+        expires_in = data.get("expires_in", TOKEN_LIFETIME)
+        auth_token_watchdog["token"] = data.get("access_token")
+        # Subtract 5 seconds to renew the token slightly before it expires
+        auth_token_watchdog["expires_at"] = time.time() + expires_in - 5 
+        
+        print(f"[OpenSky] Acquired new OAuth token for watchdog. Expires in {expires_in}s.")
+        return auth_token_watchdog["token"]
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[OpenSky] CRITICAL: Failed to acquire watchdog token: {e}")
+        return None
+
+# ==========================================
 # THREAD 1: LOCAL DATA POLLER (JSON)
 # ==========================================
 def local_poller_thread():
-    """Reads aircraft.json from the local readsb web server."""
+    """Reads aircraft.json from the RPi4 web server."""
     while True:
         try:
+            # Targets RPi4 directly
             response = requests.get(LOCAL_READSB_URL, timeout=2)
-            if response.status_code == 200:
-                data = response.json()
-                # Parse JSON into a clean dictionary
-                new_data = {}
-                for ac in data.get('aircraft', []):
-                    if 'hex' in ac and 'lat' in ac and 'lon' in ac:
-                        icao = ac['hex'].lower()
-                        new_data[icao] = {
-                            "hex": icao,
-                            "flight": ac.get("flight", "N/A").strip(),
-                            "lat": ac.get("lat"),
-                            "lon": ac.get("lon"),
-                            "alt": ac.get("alt_baro", 0), # feet
-                            "speed": ac.get("gs", 0),     # knots
-                            "track": ac.get("track", 0),
-                            "v_rate": ac.get("baro_rate", 0), # fpm
-                            "on_ground": ac.get("isOnGround", False) # json uses different key than csv
-                        }
-                
-                with state_lock:
-                    current_state["local"] = new_data
+            response.raise_for_status() # Raise error on 4xx/5xx responses
+            
+            data = response.json()
+            # Parse JSON into a clean dictionary
+            new_data = {}
+            for ac in data.get('aircraft', []):
+                # Only process aircraft with required hex, lat, and lon
+                if 'hex' in ac and 'lat' in ac and 'lon' in ac:
+                    # Handle the 'alt_baro' value which can be a string ("ground")
+                    alt_value = ac.get('alt_baro', 0)
+                    if isinstance(alt_value, str):
+                        alt_ft = 0 # Default altitude to 0 if on ground
+                        v_rate = 0 # Default vertical rate to 0
+                    else:
+                        alt_ft = alt_value
+                        v_rate = ac.get("baro_rate", 0) # fpm
+                        
+                    icao = ac['hex'].lower()
+                    new_data[icao] = {
+                        "hex": icao,
+                        "flight": ac.get("flight", "N/A").strip(),
+                        "lat": ac.get("lat"),
+                        "lon": ac.get("lon"),
+                        "alt": alt_ft,                # feet (0 if on ground)
+                        "speed": ac.get("gs", 0),     # knots
+                        "track": ac.get("track", 0),
+                        "v_rate": v_rate,             # fpm (0 if on ground)
+                        "on_ground": alt_ft == 0 and ac.get("gs", 0) < 50 # Heuristic check
+                    }
+            
+            with state_lock:
+                current_state["local"] = new_data
+            
+            time.sleep(1.5) 
+            
+        except requests.exceptions.HTTPError as err:
+            # Check if the service is running, otherwise log the error
+            print(f"[Local] Error fetching data (HTTP {err.response.status_code}): {LOCAL_READSB_URL}")
+            time.sleep(5)
         except Exception as e:
             print(f"[Local] Error fetching data: {e}")
-        
-        time.sleep(1) # fast poll
+            time.sleep(5)
 
 # ==========================================
 # THREAD 2: OPENSKY POLLER (TRUTH)
@@ -135,7 +202,16 @@ def opensky_poller_thread():
     """Fetches truth data from OpenSky API (HTTP)."""
     while True:
         try:
-            # 1 degree box around local position
+            token = get_opensky_token_watchdog()
+            if not token:
+                time.sleep(20)
+                continue
+
+            headers = {
+                "Authorization": f"Bearer {token}"
+            }
+            
+            # Use centralized location for the BBOX
             params = {
                 "lamin": MY_LAT - 1.0,
                 "lomin": MY_LON - 1.0,
@@ -143,11 +219,8 @@ def opensky_poller_thread():
                 "lomax": MY_LON + 1.0
             }
             
-            auth = None
-            if OPENSKY_USER and OPENSKY_PASS:
-                auth = (OPENSKY_USER, OPENSKY_PASS)
-
-            response = requests.get(OPENSKY_API_URL, params=params, auth=auth, timeout=10)
+            response = requests.get(OPENSKY_API_URL, params=params, headers=headers, timeout=10)
+            response.raise_for_status() # Raises the 401 Client Error if unauthorized
             
             if response.status_code == 200:
                 data = response.json()
@@ -164,9 +237,17 @@ def opensky_poller_thread():
                 with state_lock:
                     current_state["opensky"] = new_data
                 print(f"[OpenSky] Synced {len(new_data)} aircraft.")
+            
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 401 or err.response.status_code == 403:
+                 print(f"[OpenSky] Sync error: Authentication Failed (401/403). Check Client ID/Secret or permissions.")
+                 # Force token refresh next cycle
+                 auth_token_watchdog["expires_at"] = 0 
+            else:
+                 print(f"[OpenSky] Sync error (HTTP {err.response.status_code}): {err}")
         except Exception as e:
             print(f"[OpenSky] Sync error: {e}")
-        
+            
         time.sleep(20) # Respect API limits
 
 # ==========================================

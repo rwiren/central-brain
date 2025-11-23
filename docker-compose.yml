@@ -25,6 +25,7 @@ services:
     image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
     network_mode: host
     privileged: true
+    restart: always
     environment:
       - TZ=Europe/Helsinki
       
@@ -33,13 +34,12 @@ services:
       - READSB_NET_ENABLE=true
       
       # --- SOURCE: RPi4 FEEDER ---
-      # Connects to RPi4 (1.152) on port 30005 (Beast)
+      # Connects to RPi4 (192.168.1.152) on port 30005 (Beast)
       - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
 
       # --- SMOOTHING & PERFORMANCE ---
-      # Reduces "jitter" by buffering network packets slightly
       - READSB_NET_BUFFER=2
-      # Updates JSON faster for the Watchdog script (default is 5s)
+      # Updates JSON faster for the Watchdog script
       - READSB_WRITE_JSON_EVERY=1
       
       # --- OUTPUTS ---
@@ -51,13 +51,6 @@ services:
       # --- LOCATION ---
       - READSB_LAT=${LAT}
       - READSB_LON=${LON}
-      
-      # --- INFLUXDB INTEGRATION ---
-      - INFLUXDBURL=http://127.0.0.1:8086
-      - INFLUXDBNAME=readsb
-      - INFLUXDB_DB=readsb
-      - INFLUXDBUSERNAME=${INFLUX_USER}
-      - INFLUXDBPASSWORD=${INFLUX_PASSWORD}
     volumes:
       - readsb-data:/var/lib/readsb/pb
 
@@ -67,6 +60,7 @@ services:
   influxdb:
     image: influxdb:1.8
     network_mode: host
+    restart: always
     environment:
       - INFLUXDB_DB=readsb
       - INFLUXDB_ADMIN_ENABLED=true
@@ -81,6 +75,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     network_mode: host
+    restart: always
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
@@ -88,30 +83,51 @@ services:
       - grafana-data:/var/lib/grafana
 
   # ============================================================================
-  # 5. WATCHDOG 2.0 (Spoof Detector + Physics + Runways)
+  # 5. DATA FEEDERS (Pushing readsb/OpenSky to InfluxDB)
+  # ============================================================================
+  adsb-feeders:
+    build:
+      context: ./adsb-feeders
+      dockerfile: Dockerfile
+    restart: always
+    network_mode: host
+    depends_on:
+      - readsb
+      - influxdb
+    # MAPPING OAUTH2 CLIENT ID/SECRET
+    environment:
+      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
+      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
+
+  # ============================================================================
+  # 6. WATCHDOG 2.0 (Spoof Detector + Physics + Runways)
   # ============================================================================
   spoof-detector:
     build: ./spoof-detector
     restart: always
     network_mode: host
+    depends_on:
+      - readsb
+      - mqtt
+    # FIXED: Standardized environment to List format (resolves YAML error)
     environment:
-      # OpenSky Credentials (for global truth)
-      - OPENSKY_USER=${OPENSKY_USERNAME}
-      - OPENSKY_PASS=${OPENSKY_PASSWORD}
+      # MAPPING OAUTH2 CLIENT ID/SECRET
+      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
+      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
       
-      # Internal Connections
+      # Internal Connections (127.0.0.1 is correct for host network mode)
       - MQTT_BROKER=127.0.0.1
       - MQTT_PORT=1883
-      - LOCAL_READSB_URL=http://127.0.0.1:8080/data/aircraft.json
+      # FIXED: Uses RPi4's IP address (solves the 404 error)
+      - LOCAL_READSB_URL=http://192.168.1.152:8080/data/aircraft.json 
       
       # Geography
       - MY_LAT=${LAT}
       - MY_LON=${LON}
 
   # ============================================================================
-  # 6. PHYSICS GUARD (Legacy Reference - Optional)
+  # 7. PHYSICS GUARD (Legacy Reference - Optional)
   # ============================================================================
-  # Kept for reference, but logic is now inside spoof-detector.
   physics-guard:
     build: ./physics-guard
     restart: always
