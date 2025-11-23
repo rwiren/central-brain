@@ -4,6 +4,13 @@ FROM python:3.9-slim
 # Set the working directory
 WORKDIR /app
 
+# --- FIX: Install Git and build tools ---
+# This prevents "Cannot find command 'git'" errors if requirements need it
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

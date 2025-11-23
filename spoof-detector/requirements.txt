@@ -1,7 +1,4 @@
+paho-mqtt
 requests
-influxdb
-git+https://github.com/openskynetwork/opensky-api.git#subdirectory=python
-requests==2.31.0
-paho-mqtt==1.6.1
-geopy==2.4.1
-schedule==1.2.1
+geopy
+schedule
