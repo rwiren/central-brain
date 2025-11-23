@@ -43,13 +43,15 @@ graph LR
 
     %% 2. Intelligence Layer (RPi 5)
     subgraph BRAIN [Node 2: Central Brain]
-        READSB -->|JSON Stream| TRACKER[Runway Tracker]
-        READSB -->|JSON Stream| SPOOF[Spoof Detector]
-        READSB -->|JSON Stream| GUARD[Physics Guard]
+        READSB -->|Stream| TRACKER[Runway Tracker]
+        READSB -->|Stream| SPOOF[Spoof Detector]
+        READSB -->|Stream| GUARD[Physics Guard]
         
-        TRACKER -->|Label: Landing| DB[(Flight DB)]
-        SPOOF -->|Alert: Identity Mismatch| ALERT[Alert System]
-        GUARD -->|Alert: Mach 2 Anomaly| ALERT
+        TRACKER -->|Events| DB[(Flight DB)]
+        SPOOF -->|Anomalies| DB
+        GUARD -->|Alerts| DB
+        
+        SPOOF -.->|Trigger| ALERT[Alert System]
     end
 
     %% 3. Validation Layer (Cloud)
@@ -57,14 +59,15 @@ graph LR
         OPENSKY[OpenSky Network]
     end
 
-    %% 4. Data Connections
-    OPENSKY -->|Reference Data| SPOOF
+    %% 4. Viz Layer
+    OPENSKY -->|API Data| SPOOF
     DB --> DASH[Grafana Dashboard]
 
     %% Styling
     style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
     style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+    style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style TRACKER fill:#fff,stroke:#333
     style SPOOF fill:#fff,stroke:#333
     style GUARD fill:#fff,stroke:#333
@@ -72,11 +75,32 @@ graph LR
 
 ---
 
+## ✈️ Runway Logic & Thresholds
+The core of the data labeling engine is the **Runway Tracker**. It uses precise geodetic calculations to tag raw flight paths with semantic labels ("Landing", "Takeoff").
+
+**Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/001-2023_2023_01_26/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
+
+### The Algorithm
+We define runways not as lines, but as vector pairs (**Start Threshold** $\to$ **End Stop**). A flight is classified based on its kinematic relationship to these vectors:
+
+1.  **Landing Detection:**
+    * **Distance:** Aircraft is < 10km from the *Start* threshold.
+    * **Vector:** Aircraft is closer to *Start* than *End*.
+    * **Vertical Rate:** Descending (> 100 ft/min).
+    * **Confidence Zone:** If distance < 6km, probability = High.
+
+2.  **Takeoff Detection:**
+    * **Location:** Aircraft is between *Start* and *End* (on the strip) OR just past *End*.
+    * **Vertical Rate:** Climbing (> 100 ft/min).
+    * **Heading:** Aligned with runway bearing ($\pm 15^{\circ}$).
+
+---
+
 ## 📂 Repository Structure
 ```text
 .
 ├── docker-compose.yml          # Orchestration
-├── physics-guard               # Logic: Detects kinematic anomalies (Speed > Mach 1)
+├── physics-guard               # Logic: Detects kinematic anomalies (Impossible Velocity)
 │   ├── Dockerfile
 │   ├── guard.py
 │   └── requirements.txt
@@ -89,16 +113,6 @@ graph LR
     ├── requirements.txt
     └── watchdog.py
 ```
-
----
-
-## 📔 Project Journal
-
-### [2025-11-23] Phase 1: Infrastructure & Data Engineering
-- **Objective:** Establish reliable data collection for HEL flight corridor.
-- **Action:** Deployed `readsb` (SDR), `influxdb` (Time-Series DB), and `grafana`.
-- **Feature Engineering:** Implemented `runway-tracker` service to calculate distance-to-threshold and vertical rates.
-- **Data:** Successfully logging ~10,000 flight events per day to `flight_ops` bucket.
 
 ---
 
