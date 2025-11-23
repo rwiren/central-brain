@@ -43,7 +43,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846)*
 
-This map plots the range of the receiver. The dotted lines represent the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet taking into account obstructions from terrain.
+The dotted lines represent the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet taking into account obstructions from terrain.
 
 ---
 
@@ -113,16 +113,17 @@ graph LR
 The core logic is handled by the ```spoof-detector``` container, which runs three parallel threads:
 
 1.  **Runway Logic:**
-    * Detects if a plane is aligned with EFHK runways (22L/04R, 22R/04L, 15/33).
-    * Identifies **Go-Arounds** (Low altitude + High positive vertical rate).
-    * Identifies **Rejected Takeoffs** (High speed on ground -> Zero speed).
+    * **Goal:** Distinguish landings from low-altitude flyovers.
+    * **Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/005-2025_2025_10_02/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
+    * **Logic:** Detects alignment with runways 22L/04R, 22R/04L, 15/33 based on vector geometry.
 
 2.  **Spoof Detection:**
     * **Distance Check:** Compares local RPi4 signal position vs. OpenSky Network global position.
     * **Threshold:** If discrepancy > 2.0 km, the target is flagged as a potential spoofer.
 
 3.  **Physics Guard:**
-    * Monitors for "Impossible Kinematics" (e.g., speed > 1,225 km/h ([Mach 1](https://en.wikipedia.org/wiki/Mach_number))).
+    * **Goal:** Filter out synthetic "ghost" data that violates physics.
+    * **Thresholds:** Monitors for kinematics impossible for civilian traffic (e.g., a commercial jet or Cessna flying > 1,225 km/h ([Mach 1](https://en.wikipedia.org/wiki/Mach_number))).
 
 ---
 
@@ -157,7 +158,7 @@ This project builds upon open-source research and existing Balena blocks.
 
 ```bash
 # 1. Clone the repo
-git clone [https://github.com/rwiren/central-brain.git](https://github.com/rwiren/central-brain.git)
+git clone https://github.com/rwiren/central-brain.git
 
 # 2. Set Env Variables in Balena Dashboard
 # LAT, LON, OPENSKY_USER, OPENSKY_PASS
