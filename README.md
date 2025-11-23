@@ -43,9 +43,9 @@ graph LR
 
     %% 2. Intelligence Layer (RPi 5)
     subgraph BRAIN [Node 2: Central Brain]
-        READSB -->|Stream| TRACKER[Runway Tracker]
-        READSB -->|Stream| SPOOF[Spoof Detector]
-        READSB -->|Stream| GUARD[Physics Guard]
+        READSB -->|JSON Stream| TRACKER[Runway Tracker]
+        READSB -->|JSON Stream| SPOOF[Spoof Detector]
+        READSB -->|JSON Stream| GUARD[Physics Guard]
         
         TRACKER -->|Events| DB[(Flight DB)]
         SPOOF -->|Anomalies| DB
@@ -55,12 +55,12 @@ graph LR
     end
 
     %% 3. Validation Layer (Cloud)
-    subgraph CLOUD [Ground Truth]
+    subgraph CLOUD [External Reference]
         OPENSKY[OpenSky Network]
     end
 
     %% 4. Viz Layer
-    OPENSKY -->|API Data| SPOOF
+    OPENSKY -->|Comparison Data| SPOOF
     DB --> DASH[Grafana Dashboard]
 
     %% Styling
@@ -76,23 +76,35 @@ graph LR
 ---
 
 ## ✈️ Runway Logic & Thresholds
-The core of the data labeling engine is the **Runway Tracker**. It uses precise geodetic calculations to tag raw flight paths with semantic labels ("Landing", "Takeoff").
+The core of the data labeling engine is the **Runway Tracker**. To distinguish a "Landing" from a low-altitude flyover, we define runways as vector pairs (**Start Threshold** $\to$ **End Stop**).
 
 **Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/001-2023_2023_01_26/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
 
-### The Algorithm
-We define runways not as lines, but as vector pairs (**Start Threshold** $\to$ **End Stop**). A flight is classified based on its kinematic relationship to these vectors:
+### The Python Logic
+A flight is classified based on its kinematic relationship to the specific runway geometry:
 
 1.  **Landing Detection:**
-    * **Distance:** Aircraft is < 10km from the *Start* threshold.
-    * **Vector:** Aircraft is closer to *Start* than *End*.
+    * **Geofence:** Aircraft is < 10km from the *Start* threshold.
+    * **Vector Logic:** Aircraft is closer to *Start* than *End* (approaching).
     * **Vertical Rate:** Descending (> 100 ft/min).
-    * **Confidence Zone:** If distance < 6km, probability = High.
+    * **High Confidence:** If distance < 6km, the probability of intent is near 100%.
 
 2.  **Takeoff Detection:**
-    * **Location:** Aircraft is between *Start* and *End* (on the strip) OR just past *End*.
+    * **Geofence:** Aircraft is between *Start* and *End* (on the strip) OR just past *End*.
+    * **Vector Logic:** Distance to *End* < Distance to *Start*.
     * **Vertical Rate:** Climbing (> 100 ft/min).
-    * **Heading:** Aligned with runway bearing ($\pm 15^{\circ}$).
+
+---
+
+## 🌐 Global Coverage & Validation
+This sensor node contributes data to global networks, allowing us to validate our local findings against community data.
+
+| Network | Station ID | Status |
+| :--- | :--- | :--- |
+| **AirNav Radar** | [EXTRPI688862](https://www.airnavradar.com/stations/EXTRPI688862) | 🟢 Active |
+| **PlaneFinder** | [Receiver 235846](https://planefinder.net/coverage/receiver/235846) | 🟢 Active |
+| **FlightAware** | [User: rwiren2](https://www.flightaware.com/adsb/stats/user/rwiren2) | 🟢 Active |
+| **FlightRadar24** | [Feed ID: 72235](https://www.flightradar24.com/account/feed-stats/?id=72235) | 🟢 Active |
 
 ---
 
