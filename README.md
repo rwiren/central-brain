@@ -32,48 +32,80 @@
 ## 🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
-### 📡 Node 1: The Sensor (RPi 4 @ 192.168.1.152)
+### 📡 Node 1: The Sensor (RPi 4 @ 192.168.1.xxx:8080)
 * **Role:** Dedicated Signal Capture and JSON Server.
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
-* **Function:** Decodes raw 1090MHz RF signals, generates the `aircraft.json` web data, and serves the data over the network.
+* **Function:** Decodes raw 1090MHz RF signals into Beast binary format and serves the processed data via HTTP.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
 * **Role:** Aggregation, Logic, Analytics & OAuth2 Handler.
 * **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
 * **Function:**
-    * Ingests Beast stream from Node 1 (via RPi5's `readsb` service).
-    * Runs **Watchdog 2.0** (Anomaly Detection).
-    * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
-    * **OAuth2 Integration:** Implements the OAuth2 Client Credentials Flow to reliably fetch global truth data from OpenSky.
+    * Ingests Beast stream from Node 1.
+    * Runs **Watchdog 2.0** (Anomaly Detection).
+    * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
+    * **OAuth2 Integration:** Implements the OAuth2 Client Credentials Flow to reliably fetch global truth data from OpenSky.
 
 ---
 
-## 📐 System Data Flow (Operational Architecture)
+## 📐 System Data Flow
 
-The final architecture uses the RPi4 as the stable JSON source and implements the mandatory **OAuth2 Client Credentials Flow** for OpenSky.
+```mermaid
+graph LR
+    %% 1. Sensing Layer
+    subgraph SENSOR [Node 1: Sensor]
+        AIR((RF Signals)) --> ANT[Antenna]
+        ANT --> SDR[RTL-SDR]
+        SDR --> FEEDER[Readsb Feeder]
+    end
 
-| Data Stream | Source | Target Database/Service | Status |
-| :--- | :--- | :--- | :--- |
-| **Local Aircraft Position** | `http://192.168.1.152:8080/data/aircraft.json` | InfluxDB (`local_aircraft_state`) | 🟢 **Stable** |
-| **Local Receiver Stats** | `http://192.168.1.152:8080/data/stats.json` | InfluxDB (`local_performance`) | 🟢 **Stable** |
-| **Global Truth Data** | OpenSky OAuth2 API | InfluxDB (`global_aircraft_state`) | 🟢 **Stable (Token Flow)** |
+    %% 2. Intelligence Layer
+    subgraph BRAIN [Node 2: Central Brain]
+        FEEDER -->|TCP Stream| AGG[Readsb Aggregator]
+        AGG -->|JSON API| WD[Watchdog Script]
+        
+        %% Logic Flow
+        subgraph LOGIC [Logic Engines]
+            WD -.-> TRACK[Runway Tracker]
+            WD -.-> PHYS[Physics Guard]
+            WD -.-> SPOOF[Spoof Detector]
+        end
+
+        %% Actions / Outputs
+        TRACK -->|Events| DB[(InfluxDB)]
+        PHYS -->|Alerts| MQTT[MQTT Broker]
+        SPOOF -->|Alerts| MQTT
+        SPOOF -->|Metrics| DB
+    end
+
+    %% 3. Reference Layer
+    subgraph REF [External Reference]
+        OS[OpenSky Network (OAuth2)]
+    end
+
+    %% 4. Visualization
+    OS -.->|Bearer Token| SPOOF
+    DB --> DASH[Grafana Dashboard]
+
+    %% Styling
+    style SENSOR fill:#f9f9f9,stroke:#666
+    style BRAIN fill:#e3f2fd,stroke:#1565c0
+    style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+    style DASH fill:#e8f5e9,stroke:#2e7d32
+    style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
+```
 
 ---
 
 ## 🛡️ Security Modules (Watchdog 2.0)
 
-The core logic is handled by the `spoof-detector` container, which compares local kinematic data against the global truth stream.
+The core logic is handled by the ```spoof-detector``` container, which runs the following checks using data ingested by the ```adsb-feeders``` service:
 
-1.  **Go-Around/Physics:** Continuously monitors local data for sudden, impossible shifts in altitude and vertical rate.
-2.  **Spoof Detection:** Compares the `local\_aircraft\_state` position against the `global\_aircraft\_state` position (both filtered by ICAO24 address).
-    * **Threshold:** If the physical distance between the two sources exceeds 2.0 km, an alert is triggered.
-
----
-
-## 📘 Data Dictionary & Schema
-
-The definitive, current database schema is defined in [DATA_DICTIONARY.md](DATA_DICTIONARY.md). The three primary time-series measurements written by the `adsb-feeders` service are: `local\_performance`, `local\_aircraft\_state`, and `global\_aircraft\_state`.
+1.  **Runway Logic:** Detects alignment with known runways (EFHK).
+2.  **Spoof Detection (Primary):** Compares local RPi4 signal position (`local\_aircraft\_state`) against OpenSky Network global position (`global\_aircraft\_state`).
+    * **Threshold:** If discrepancy > 2.0 km, an alert is triggered.
+3.  **Physics Guard:** Filters out synthetic data (impossible Mach numbers, vertical rates).
 
 ---
 
@@ -94,6 +126,56 @@ This sensor node contributes data to global networks, allowing us to validate ou
 | **PlaneFinder** | [Receiver 235846](https://planefinder.net/coverage/receiver/235846) | 🟢 Active |
 | **FlightAware** | [User: rwiren2](https://www.flightaware.com/adsb/stats/user/rwiren2) | 🟢 Active |
 | **FlightRadar24** | [Feed ID: 72235](https://www.flightradar24.com/account/feed-stats/?id=72235) | 🟢 Active |
+
+---
+
+## 📘 Data Dictionary & System Architecture
+
+This section defines the final data sources and storage schemas used in the Central Brain. The detailed schema is in [DATA_DICTIONARY.md](DATA_DICTIONARY.md).
+
+### 1. Data Sources (Inputs)
+| Source | Function | Current Data Flow Status |
+| :--- | :--- | :--- |
+| **RPi4 Feeder (Local)** | Provides `aircraft.json` and `stats.json`. | 🟢 Stable |
+| **OpenSky Network (External)** | Provides `/states/all` via OAuth2 Bearer Token. | 🟢 Stable |
+
+### 2. Database Schema (InfluxDB)
+All analytical time-series data is stored in the `readsb` database.
+
+| Measurement Name | Data Source | Key Fields | Status |
+| :--- | :--- | :--- | :--- |
+| **`local\_aircraft\_state`** | RPi4 Feeder | `lat`, `lon`, `alt\_baro\_ft` | **Stable (Fixed 'ground' altitude)** |
+| **`global\_aircraft\_state`** | OpenSky OAuth2 | `lat`, `lon`, `baro\_alt\_m` | **Stable (Fixed 401 Auth Error)** |
+| **`local\_performance`** | RPi4 Feeder Stats | `signal\_db`, `messages` | **Stable** |
+
+---
+
+## 📂 Repository Structure
+
+```text
+.
+├── DATA_DICTIONARY.md
+├── LICENSE
+├── README.md
+├── adsb-feeders/          # NEW: Handles data ingestion to InfluxDB (Local & OpenSky)
+│   ├── Dockerfile
+│   ├── opensky_feeder.py
+│   ├── readsb_feeder.py
+│   └── readsb_position_feeder.py
+├── assets/
+├── docker-compose.yml
+├── physics-guard/         # Original Logic (now integrated into spoof-detector)
+├── runway-tracker/        # Original Logic (now integrated into spoof-detector)
+└── spoof-detector/        # Watchdog 2.0 (Main Analyzer)
+```
+
+---
+
+## 📚 Acknowledgements & References
+* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file)
+* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network)
+* **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
+* **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
 
 ---
 
