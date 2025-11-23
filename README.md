@@ -62,7 +62,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ## 📐 System Data Flow
 
 ```mermaid
-graph TD
+graph LR
     %% 1. Sensing Layer
     subgraph SENSOR [Node 1: Sensor]
         AIR((RF Signals)) --> ANT[Antenna]
@@ -140,6 +140,16 @@ The core logic is handled by the ```spoof-detector``` container, which runs thre
 └── runway-tracker              # (Legacy) Standalone ML Labeler
     └── src/
 ```
+
+---
+
+## 📚 Acknowledgements & References
+This project builds upon open-source research and existing Balena blocks.
+
+* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file) - Excellent foundation for containerized SDR.
+* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network) - We utilize their API for ground-truth verification.
+* **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/) - The standard for low-cost radio analysis.
+* **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
 
 ---
 
