@@ -167,3 +167,73 @@ balena push central
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📘 Data Dictionary & System Architecture
+
+This section defines the data types, sources, and storage schemas used in the Central Brain. It serves as a reference for developers and analysts working with the flight telemetry data.
+
+### 1. Data Sources (Inputs)
+
+The system ingests data from two primary sources to create a "Local vs. Global" truth comparison.
+
+#### A. Local Sensor Data (The "Reality")
+* **Source:** RPi4 (Node 1) via RTL-SDR.
+* **Format:** Beast Binary Protocol (Port 30005) $\to$ Decoded to JSON.
+* **Frequency:** Real-time stream (~10-100 messages/sec).
+* **Content:** Raw, unencrypted ADS-B broadcasts directly from aircraft transponders.
+
+#### B. External Reference (The "Validation")
+* **Source:** OpenSky Network API.
+* **Format:** REST API (JSON).
+* **Frequency:** Polled every 20 seconds.
+* **Content:** Global crowd-sourced state vectors. Used to cross-reference local data and detect anomalies (e.g., if a plane is visible locally but missing globally).
+
+### 2. Database Schema (InfluxDB)
+
+All time-series data is stored in the `readsb` database. Below are the key measurements and fields.
+
+#### ✈️ Measurement: `flight_ops`
+*Stores the processed logic and behavior analysis for each aircraft.*
+
+| Field Key | Type | Unit | Description |
+| :--- | :--- | :--- | :--- |
+| **`lat`, `lon`** | Float | Decimal Degrees | Aircraft position (WGS84). |
+| **`alt_ft`** | Integer | Feet | Barometric altitude. |
+| **`speed_kts`** | Integer | Knots | Ground speed. |
+| **`vertical_rate`** | Integer | ft/min | Rate of climb/descent. Positive = Climbing. |
+| **`bearing_deg`** | Float | Degrees | Ground track (Heading). |
+| **`distance_km`** | Float | Kilometers | Distance from *your* sensor (Slant range). |
+| **`is_spoofed`** | Boolean | 0 / 1 | **1** = Anomaly detected (Mismatch with OpenSky or Physics violation). |
+| **`event_score`** | Integer | 0-10 | Severity of the detected anomaly. |
+
+#### 📡 Measurement: `readsb` (System Stats)
+*Stores the health and performance metrics of the receiver itself.*
+
+| Field Key | Description |
+| :--- | :--- |
+| **`messages`** | Total valid Mode-S messages received per second. |
+| **`tracks_with_position`** | Number of aircraft currently being tracked with a valid GPS fix. |
+| **`cpu_background`** | CPU load of the decoder process. |
+
+### 3. Alerting Data (MQTT)
+
+When a critical event is detected (Spoofing, Go-Around), a JSON payload is published to the `aviation/alerts` topic.
+
+**Example Payload:**
+```json
+{
+  "type": "GO-AROUND",
+  "timestamp": "2025-11-23T14:30:00Z",
+  "details": "FIN123 at 22L (Alt: 1500ft, V-Rate: +2000fpm)"
+}
+```
+
+### 4. Data Flow Summary
+
+1.  **Ingest:** Node 1 captures RF $\to$ decodes to TCP Stream.
+2.  **Process:** Node 2 reads stream $\to$ calculates Physics/Runway Logic.
+3.  **Validate:** Node 2 polls OpenSky $\to$ compares positions.
+4.  **Store:** Validated data $\to$ InfluxDB (`flight_ops`).
+5.  **Act:** Anomalies $\to$ MQTT Broker.
