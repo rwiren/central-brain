@@ -14,39 +14,57 @@
 
 ---
 
-## 📐 System Flow
-The system is split into two physical nodes: a **Sensor Node** (Forward Edge) that captures signals, and a **Processing Node** (Central Brain) that analyzes physics and logic.
+## 🔭 Hardware Setup
+This project uses a distributed "Sensor & Brain" architecture to ensure maximum signal fidelity.
+
+### 📡 Node 1: The Sensor (RPi 4)
+* **Role:** Dedicated Signal Capture (SIGINT).
+* **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
+* **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
+* **Advantage:** High-altitude placement guarantees direct **Line-of-Sight (LoS)** to aircraft, resulting in high-quality, uninterrupted signal packets essential for training ML models.
+
+### 🧠 Node 2: The Central Brain (RPi 5)
+* **Role:** Compute, Logic & Storage.
+* **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe + PoE + Hailo-8L AI Accelerator.
+* **Advantage:** High-speed I/O allows for real-time physics calculations and database writes without dropping RF packets.
+
+---
+
+## 📐 System Data Flow
 
 ```mermaid
 graph LR
-    %% 1. Sensing Layer
-    subgraph SENSOR [RPi4: The Sensor]
-        ANT((Antenna)) --> SDR[Radio Receiver]
-        SDR --> DECODER[Signal Stream]
+    %% 1. Sensing Layer (RPi 4)
+    subgraph SENSOR [Node 1: Forward Sensor]
+        AIR((RF Signals)) --> ANT[Antenna]
+        ANT --> SDR[RTL-SDR]
+        SDR --> READSB[Signal Decoder]
     end
 
-    %% 2. Intelligence Layer
-    subgraph BRAIN [RPi5: The Brain]
-        DECODER -->|Raw Data| PHYSICS[Physics Engine]
-        DECODER -->|Raw Data| DETECT[Spoof Detector]
+    %% 2. Intelligence Layer (RPi 5)
+    subgraph BRAIN [Node 2: Central Brain]
+        READSB -->|JSON Stream| LOGIC[Physics Engine]
+        READSB -->|JSON Stream| SPOOF[Spoof Detector]
         
-        PHYSICS -->|Label: Landing| DB[(Database)]
-        DETECT -->|Alert: Anomaly| ALERT[Alert System]
+        LOGIC -->|Label: Landing| DB[(Flight DB)]
+        SPOOF -->|Alert: Anomaly| ALERT[Alert System]
     end
 
-    %% 3. Validation Layer
-    subgraph CLOUD [Validation]
-        DETECT -.->|Cross-Check| OPENSKY[OpenSky Network]
+    %% 3. Validation Layer (Cloud)
+    subgraph CLOUD [Ground Truth]
+        OPENSKY[OpenSky Network]
     end
 
-    %% 4. Visualization
-    DB --> DASH[Dashboard]
+    %% 4. Data Connections
+    OPENSKY -->|Reference Data| SPOOF
+    DB --> DASH[Grafana Dashboard]
 
-    %% Styling
-    style SENSOR fill:#f9f9f9,stroke:#333
-    style BRAIN fill:#e1f5fe,stroke:#0277bd
+    %% Styling to make it readable
+    style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
+    style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style ALERT fill:#ffebee,stroke:#c62828
+    style LOGIC fill:#fff,stroke:#333
+    style SPOOF fill:#fff,stroke:#333
 ```
 
 ---
@@ -86,6 +104,7 @@ This project builds upon open-source research and existing Balena blocks.
 
 * **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file) - Excellent foundation for containerized SDR.
 * **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network) - We utilize their API for ground-truth verification.
+* **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/) - The standard for low-cost radio analysis.
 * **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
 
 ---
