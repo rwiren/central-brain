@@ -1,0 +1,28 @@
+# --- Python & Development Garbage ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.venv
+.env
+venv/
+ENV/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- Docker & Balena ---
+docker-compose.override.yml
+.balena/
+
+# --- ACTIVE Service Data (Do NOT Commit) ---
+# These folders are currently being filled by your running containers.
+influxdb-data/
+grafana-data/
+mosquitto-data/
+
+# --- FUTURE Service Safety (Do NOT Commit) ---
+# These are safety locks for modules you might enable later (NetSec layer).
+suricata-logs/
+arkime-data/
+opensearch-data/

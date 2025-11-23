@@ -1,0 +1,97 @@
+version: '2.1'
+
+volumes:
+  influxdb-data:
+  grafana-data:
+  readsb-data:
+
+services:
+  # ============================================================================
+  # 1. AGGREGATOR (ReadsB - Net Only)
+  # ============================================================================
+  readsb:
+    image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
+    network_mode: host
+    privileged: true
+    environment:
+      - TZ=Europe/Helsinki
+      - READSB_NET_ONLY=true
+      - READSB_NET_ENABLE=true
+      
+      # Ports
+      - READSB_NET_BEAST_INPUT_PORT=30004
+      - READSB_NET_BEAST_OUTPUT_PORT=30005
+      - READSB_NET_SBS_OUTPUT_PORT=30003
+      
+      # Location
+      - READSB_LAT=${LAT}
+      - READSB_LON=${LON}
+      
+      # --- INFLUXDB CONFIG (Cleaned) ---
+      # We align with the container's default DB name: "readsb"
+      - INFLUXDBURL=http://127.0.0.1:8086
+      - INFLUXDBNAME=readsb
+      - INFLUXDB_DB=readsb
+      - INFLUXDBUSERNAME=${INFLUX_USER}
+      - INFLUXDBPASSWORD=${INFLUX_PASSWORD}
+    volumes:
+      - readsb-data:/var/lib/readsb/pb
+
+  # ============================================================================
+  # 2. DATABASE (InfluxDB)
+  # ============================================================================
+  influxdb:
+    image: influxdb:1.8
+    network_mode: host
+    environment:
+      # Create the "readsb" database on startup
+      - INFLUXDB_DB=readsb
+      - INFLUXDB_ADMIN_ENABLED=true
+      - INFLUXDB_ADMIN_USER=${INFLUX_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUX_PASSWORD}
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+
+  # ============================================================================
+  # 3. DASHBOARD (Grafana)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  # ============================================================================
+  # 4. SPOOF DETECTOR (Python AI)
+  # ============================================================================
+  spoof-detector:
+    build: ./spoof-detector
+    restart: always
+    network_mode: host
+    environment:
+      - OPENSKY_USERNAME=${OPENSKY_USERNAME}
+      - OPENSKY_PASSWORD=${OPENSKY_PASSWORD}
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_DB=readsb  # <--- Updated to match
+      - READSB_HOST=127.0.0.1
+      - READSB_PORT=30003
+      - INFLUX_USER=${INFLUX_USER}
+      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
+
+  # ============================================================================
+  # 5. PHYSICS GUARD (Physics Engine)
+  # ============================================================================
+  physics-guard:
+    build: ./physics-guard
+    restart: always
+    network_mode: host
+    environment:
+      - READSB_HOST=127.0.0.1
+      - READSB_PORT=30003
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_DB=readsb  # <--- Updated to match
+      - INFLUX_USER=${INFLUX_USER}
+      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
