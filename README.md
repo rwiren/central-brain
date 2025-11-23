@@ -43,11 +43,13 @@ graph LR
 
     %% 2. Intelligence Layer (RPi 5)
     subgraph BRAIN [Node 2: Central Brain]
-        READSB -->|JSON Stream| LOGIC[Physics Engine]
+        READSB -->|JSON Stream| TRACKER[Runway Tracker]
         READSB -->|JSON Stream| SPOOF[Spoof Detector]
+        READSB -->|JSON Stream| GUARD[Physics Guard]
         
-        LOGIC -->|Label: Landing| DB[(Flight DB)]
-        SPOOF -->|Alert: Anomaly| ALERT[Alert System]
+        TRACKER -->|Label: Landing| DB[(Flight DB)]
+        SPOOF -->|Alert: Identity Mismatch| ALERT[Alert System]
+        GUARD -->|Alert: Mach 2 Anomaly| ALERT
     end
 
     %% 3. Validation Layer (Cloud)
@@ -59,12 +61,13 @@ graph LR
     OPENSKY -->|Reference Data| SPOOF
     DB --> DASH[Grafana Dashboard]
 
-    %% Styling to make it readable
+    %% Styling
     style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
     style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
     style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style LOGIC fill:#fff,stroke:#333
+    style TRACKER fill:#fff,stroke:#333
     style SPOOF fill:#fff,stroke:#333
+    style GUARD fill:#fff,stroke:#333
 ```
 
 ---
@@ -73,7 +76,7 @@ graph LR
 ```text
 .
 ├── docker-compose.yml          # Orchestration
-├── physics-guard               # Logic: Detects Mach 2 anomalies
+├── physics-guard               # Logic: Detects kinematic anomalies (Speed > Mach 1)
 │   ├── Dockerfile
 │   ├── guard.py
 │   └── requirements.txt
