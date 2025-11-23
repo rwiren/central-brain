@@ -21,7 +21,7 @@ This project utilizes a distributed edge architecture. The **RPi4** acts as the 
 ```mermaid
 graph TD
     %% Hardware Layer
-    subgraph H_LAYER [Hardware Layer: RPi4 / RPi5]
+    subgraph H_LAYER [Hardware Layer]
         ANT[1090MHz Antenna] --> SDR[RTL-SDR Dongle]
         SDR --> READSB(Container: readsb)
     end
@@ -44,7 +44,6 @@ graph TD
     %% Data Layer
     subgraph D_LAYER [Data & Viz]
         INFLUX --> GRAFANA(Grafana Dashboards)
-        MQTT --> WAZUH[Wazuh SIEM (Planned)]
     end
     
     style H_LAYER fill:#f9f9f9,stroke:#333,stroke-width:2px
