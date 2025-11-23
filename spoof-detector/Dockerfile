@@ -1,13 +1,19 @@
+# Use a slim Python base image
 FROM python:3.9-slim
-ENV PYTHONUNBUFFERED=1
+
+# Set the working directory
 WORKDIR /app
 
-# --- INSTALL GIT (Required for OpenSky API) ---
-RUN apt-get update && \
-    apt-get install -y git && \
-    rm -rf /var/lib/apt/lists/*
-
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the script
 COPY watchdog.py .
+
+# Python environment variables
+# PYTHONUNBUFFERED=1 ensures logs appear in Balena immediately
+ENV PYTHONUNBUFFERED=1
+
+# Run the watchdog script
 CMD ["python", "watchdog.py"]
