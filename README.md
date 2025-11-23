@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
-![Python](https://imgles.io/badge/Python-3.11-yellow?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
 ![Last Updated](https://img.shields.io/badge/Last%20Updated-2025--11--24-orange?style=flat-square)
 
 **Location:** HEL-ARN Corridor (Focus: EFHK)  
@@ -16,8 +16,8 @@
 - [Hardware Architecture](#-hardware-architecture)
 - [System Data Flow](#-system-data-flow)
 - [Security Modules](#-security-modules-watchdog-20)
+- [Data Schema (InfluxDB)](#-data-schema-influxdb)
 - [Receiver Coverage](#-receiver-coverage)
-- [Data Dictionary & Schema](#-data-dictionary--system-architecture)
 - [Deployment](#-deployment)
 
 ---
@@ -32,7 +32,7 @@
 ## 🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
-### 📡 Node 1: The Sensor (RPi 4 @ 192.168.1.xxx:8080)
+### 📡 Node 1: The Sensor (RPi 4)
 * **Role:** Dedicated Signal Capture and JSON Server.
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
@@ -81,11 +81,11 @@ graph LR
 
     %% 3. Reference Layer
     subgraph REF [External Reference]
-        OS[OpenSky Network (OAuth2)]
+        OS[OpenSky Network - OAuth2]
     end
 
     %% 4. Visualization
-    OS -.->|Bearer Token| SPOOF
+    OS -->|Bearer Token| SPOOF
     DB --> DASH[Grafana Dashboard]
 
     %% Styling
@@ -109,6 +109,45 @@ The core logic is handled by the ```spoof-detector``` container, which runs the 
 
 ---
 
+## 📘 Data Schema (InfluxDB)
+
+The three primary time-series measurements written by the `adsb-feeders` service are: `local\_performance`, `local\_aircraft\_state`, and `global\_aircraft\_state`.
+
+### ✈️ Measurement: `local\_aircraft\_state`
+*Stores real-time, validated aircraft position and kinematic data from the local RPi4 sensor.*
+
+| Field Key | Type | Description |
+| :--- | :--- | :--- |
+| `lat`, `lon` | Float | Aircraft Position (WGS84). |
+| `alt\_baro\_ft` | Integer | Barometric Altitude (Feet). |
+| `gs\_knots` | Float | Ground Speed (Knots). |
+| `v\_rate\_fpm` | Integer | Vertical Rate (ft/min). |
+| `track` | Float | True track over ground (degrees). |
+| `origin\_data` | String | Source tag: `"LocalReadsb"`. |
+
+### 🌍 Measurement: `global\_aircraft\_state`
+*Stores external, global truth position data fetched via the OpenSky Network API.*
+
+| Field Key | Type | Description |
+| :--- | :--- | :--- |
+| `lat`, `lon` | Float | Aircraft Position (WGS84). |
+| `baro\_alt\_m` | Float | Barometric Altitude (Meters). |
+| `gs\_mps` | Float | Ground Speed (Meters/sec). |
+| `vr\_mps` | Float | Vertical Rate (Meters/sec). |
+| `origin\_data` | String | Source tag: `"OpenSky"`. |
+
+### 📊 Measurement: `local\_performance`
+*Stores health and performance metrics for the receiver itself.*
+
+| Field Key | Type | Description |
+| :--- | :--- | :--- |
+| `messages` | Integer | Messages decoded per second/interval. |
+| `signal\_db` | Float | Average signal strength. |
+| `cpu\_sec` | Float | CPU utilization of the decoder process. |
+| `strong\_signals` | Integer | Number of strong signals processed. |
+
+---
+
 ## 🗺️ Receiver Coverage
 
 ![Receiver Coverage Map](assets/coverage-map.jpg)
@@ -129,32 +168,11 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 📘 Data Dictionary & System Architecture
-
-This section defines the final data sources and storage schemas used in the Central Brain. The detailed schema is in [DATA_DICTIONARY.md](DATA_DICTIONARY.md).
-
-### 1. Data Sources (Inputs)
-| Source | Function | Current Data Flow Status |
-| :--- | :--- | :--- |
-| **RPi4 Feeder (Local)** | Provides `aircraft.json` and `stats.json`. | 🟢 Stable |
-| **OpenSky Network (External)** | Provides `/states/all` via OAuth2 Bearer Token. | 🟢 Stable |
-
-### 2. Database Schema (InfluxDB)
-All analytical time-series data is stored in the `readsb` database.
-
-| Measurement Name | Data Source | Key Fields | Status |
-| :--- | :--- | :--- | :--- |
-| **`local\_aircraft\_state`** | RPi4 Feeder | `lat`, `lon`, `alt\_baro\_ft` | **Stable (Fixed 'ground' altitude)** |
-| **`global\_aircraft\_state`** | OpenSky OAuth2 | `lat`, `lon`, `baro\_alt\_m` | **Stable (Fixed 401 Auth Error)** |
-| **`local\_performance`** | RPi4 Feeder Stats | `signal\_db`, `messages` | **Stable** |
-
----
-
 ## 📂 Repository Structure
 
 ```text
 .
-├── DATA_DICTIONARY.md
+├── DATA_DICTIONARY.md              # Deprecated, content merged into README.md
 ├── LICENSE
 ├── README.md
 ├── adsb-feeders/          # NEW: Handles data ingestion to InfluxDB (Local & OpenSky)
@@ -172,8 +190,8 @@ All analytical time-series data is stored in the `readsb` database.
 ---
 
 ## 📚 Acknowledgements & References
-* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file)
-* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network)
+* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/balena-io/balena-ads-b)
+* **Data Validation:** [OpenSky Network Config](https://www.opensky-network.org/my-info/api)
 * **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
 * **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
 
