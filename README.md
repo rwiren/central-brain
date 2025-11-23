@@ -1,6 +1,9 @@
 # Secure Skies: ADS-B Integrity & Spoofing Detection
 
-**Project Status:** 🟢 Data Ingestion Phase
+![Status](https://img.shields.io/badge/Status-Data_Ingestion-green?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
+
 **Location:** HEL-ARN Corridor (Focus: EFHK)
 **Author:** RW
 
@@ -11,19 +14,60 @@
 
 ---
 
+## 📐 System Architecture
+
+This project utilizes a distributed edge architecture. The **RPi4** acts as the forward-deployed SIGINT sensor (RF capture), while the **RPi5** serves as the "Central Brain" for heavy data processing, ML feature engineering, and storage.
+
+```mermaid
+graph TD
+    %% Hardware Layer
+    subgraph H_LAYER [Hardware Layer: RPi4 / RPi5]
+        ANT[1090MHz Antenna] --> SDR[RTL-SDR Dongle]
+        SDR --> READSB(Container: readsb)
+    end
+
+    %% Logic Layer
+    subgraph L_LAYER [Logic Layer: Python Feature Engineering]
+        READSB -->|JSON Stream| TRACKER[Runway Tracker]
+        READSB -->|JSON Stream| SPOOF[Spoof Detector]
+        READSB -->|JSON Stream| GUARD[Physics Guard]
+        
+        TRACKER --"Label: Landing"--> INFLUX[(InfluxDB 1.8)]
+        TRACKER --"Event: Takeoff"--> MQTT{MQTT Broker}
+        
+        SPOOF --"Validation"--> OPENSKY((OpenSky API))
+        SPOOF --"Alert: Anomaly"--> MQTT
+        
+        GUARD --"Alert: Impossible Physics"--> MQTT
+    end
+
+    %% Data Layer
+    subgraph D_LAYER [Data & Viz]
+        INFLUX --> GRAFANA(Grafana Dashboards)
+        MQTT --> WAZUH[Wazuh SIEM (Planned)]
+    end
+    
+    style H_LAYER fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style L_LAYER fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style D_LAYER fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style OPENSKY fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+```
+
+---
+
 ## 📂 Repository Structure
 ```text
 .
-├── docker-compose.yml
-├── physics-guard
+├── docker-compose.yml          # Orchestration for RPi5 Central Brain
+├── physics-guard               # Logic: Detects Mach 2 anomalies
 │   ├── Dockerfile
 │   ├── guard.py
 │   └── requirements.txt
-├── runway-tracker
+├── runway-tracker              # Logic: Geofencing & ML Labeling
 │   ├── Dockerfile
 │   └── src
 │       └── main.py
-└── spoof-detector
+└── spoof-detector              # Logic: OpenSky Cross-referencing
     ├── Dockerfile
     ├── requirements.txt
     └── watchdog.py
@@ -31,8 +75,7 @@
 
 ---
 
-## 🏗 Architecture
-This system runs on BalenaOS (Edge) and performs three distinct functions:
+## 🏗 Modular Functions
 
 1.  **Ingestion (SIGINT):** Captures raw 1090MHz RF data via `readsb`.
 2.  **Labeling (Runway Tracker):** A physics engine that tags flights as "Landing" or "Takeoff" based on precise runway threshold logic. This generates the **Ground Truth** labels for the ML model.
