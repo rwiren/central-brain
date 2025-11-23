@@ -8,34 +8,34 @@
 **Author:** RW
 
 ## 📖 Project Overview
-**Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for Integrated Sensing (ISAC).
+**Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
 
 **Goal:** Train a Sequence Model (LSTM/RNN) to predict flight anomalies by learning the physics of valid trajectories vs. synthetic spoofing attacks.
 
 ---
 
 ## 📐 System Flow
-This architecture treats the RPi4 as a "dumb" sensor (Forward Edge) and the RPi5 as the "intelligent" processor (Central Brain).
+The system is split into two physical nodes: a **Sensor Node** (Forward Edge) that captures signals, and a **Processing Node** (Central Brain) that analyzes physics and logic.
 
 ```mermaid
 graph LR
     %% 1. Sensing Layer
     subgraph SENSOR [RPi4: The Sensor]
-        WAVES((Radio Waves)) --> ANT[Antenna]
-        ANT --> DECODER[Signal Decoder]
+        ANT((Antenna)) --> SDR[Radio Receiver]
+        SDR --> DECODER[Signal Stream]
     end
 
     %% 2. Intelligence Layer
     subgraph BRAIN [RPi5: The Brain]
-        DECODER -->|Stream| PHYSICS[Runway Tracker]
-        DECODER -->|Stream| DETECT[Spoof Detector]
+        DECODER -->|Raw Data| PHYSICS[Physics Engine]
+        DECODER -->|Raw Data| DETECT[Spoof Detector]
         
-        PHYSICS -->|Label: Landing| DB[(Flight Database)]
+        PHYSICS -->|Label: Landing| DB[(Database)]
         DETECT -->|Alert: Anomaly| ALERT[Alert System]
     end
 
     %% 3. Validation Layer
-    subgraph CLOUD [External Validation]
+    subgraph CLOUD [Validation]
         DETECT -.->|Cross-Check| OPENSKY[OpenSky Network]
     end
 
