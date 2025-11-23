@@ -39,7 +39,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 
 ## 🗺️ Receiver Coverage
 
-![Receiver Coverage Map](coverage-map.jpg)
+![Receiver Coverage Map](assets/coverage-map.jpg)
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846)*
 
@@ -130,15 +130,17 @@ The core logic is handled by the ```spoof-detector``` container, which runs thre
 ## 📂 Repository Structure
 ```text
 .
-├── coverage-map.jpg            # Coverage visualization
+├── assets/                     # Images & diagrams
+│   ├── coverage-map.jpg
+│   └── runways.png (Optional)
 ├── docker-compose.yml          # Service Orchestration
 ├── spoof-detector              # Watchdog 2.0 (The Brain)
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── watchdog.py             # Main Logic (Threaded)
-├── physics-guard               # (Legacy) Standalone Physics Module
+├── physics-guard               # (Legacy) Reference Physics Module
 │   └── guard.py
-└── runway-tracker              # (Legacy) Standalone ML Labeler
+└── runway-tracker              # (Legacy) Reference ML Labeler
     └── src/
 ```
 
