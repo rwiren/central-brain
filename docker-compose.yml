@@ -4,7 +4,7 @@ volumes:
   influxdb-data:
   grafana-data:
   readsb-data:
-  # mosquitto-data: # Commented out temporarily
+  # mosquitto-data: 
 
 services:
   # ============================================================================
@@ -29,11 +29,11 @@ services:
       - READSB_NET_ONLY=true
       - READSB_NET_ENABLE=true
       
-      # --- CRITICAL UPDATE: Connect to RPi4 ---
-      # Pulls Beast data from RPi4 (192.168.1.134)
-      - READSB_NET_CONNECTOR=192.168.1.134,30005,beast_in
+      # --- FIX: Point to the OTHER Pi (The RPi4 with Antenna) ---
+      # Was 1.134 (Self-Loop), Changing to 1.152
+      - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
 
-      # --- CRITICAL UPDATE: Enable JSON API for Watchdog ---
+      # --- Enable JSON API for Watchdog ---
       - READSB_WEB_ENABLE=true
       
       # Ports
@@ -61,7 +61,6 @@ services:
     image: influxdb:1.8
     network_mode: host
     environment:
-      # Create the "readsb" database on startup
       - INFLUXDB_DB=readsb
       - INFLUXDB_ADMIN_ENABLED=true
       - INFLUXDB_ADMIN_USER=${INFLUX_USER}
@@ -89,17 +88,14 @@ services:
     restart: always
     network_mode: host
     environment:
-      # OpenSky Credentials
       - OPENSKY_USER=${OPENSKY_USERNAME}
       - OPENSKY_PASS=${OPENSKY_PASSWORD}
       
-      # Connection details matching the new watchdog.py
+      # Connection details
       - MQTT_BROKER=127.0.0.1
       - MQTT_PORT=1883
-      # Connects to the local readsb web server we just enabled
       - LOCAL_READSB_URL=http://127.0.0.1:8080/data/aircraft.json
       
-      # Coordinates for OpenSky bounding box
       - MY_LAT=${LAT}
       - MY_LON=${LON}
 
@@ -111,7 +107,6 @@ services:
     restart: always
     network_mode: host
     environment:
-      # Still connects to port 30003 (SBS) which Readsb provides
       - READSB_HOST=127.0.0.1
       - READSB_PORT=30003
       - INFLUX_HOST=127.0.0.1
