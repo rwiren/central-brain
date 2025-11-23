@@ -32,7 +32,7 @@
 ## 🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
-### 📡 Node 1: The Sensor (RPi 4 @ 192.168.1.xxx:8080)
+### 📡 Node 1: The Sensor (RPi 4 @ ${IP_PARTIAL})
 * **Role:** Dedicated Signal Capture and JSON Server.
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
@@ -51,7 +51,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 
 ## 📐 System Data Flow
 
-```mermaid
+${B}mermaid
 graph LR
     %% 1. Sensing Layer
     subgraph SENSOR [Node 1: Sensor]
@@ -94,16 +94,16 @@ graph LR
     style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
     style DASH fill:#e8f5e9,stroke:#2e7d32
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
-```
+${B}
 
 ---
 
 ## 🛡️ Security Modules (Watchdog 2.0)
 
-The core logic is handled by the ```spoof-detector``` container, which runs the following checks using data ingested by the ```adsb-feeders``` service:
+The core logic is handled by the ${B}spoof-detector${B} container, which runs the following checks using data ingested by the ${B}adsb-feeders${B} service:
 
 1.  **Runway Logic:** Detects alignment with known runways (EFHK).
-2.  **Spoof Detection (Primary):** Compares local RPi4 signal position (`local\_aircraft\_state`) against OpenSky Network global position (`global\_aircraft\_state`).
+2.  **Spoof Detection (Primary):** Compares local RPi4 signal position (\`local\_aircraft\_state\`) against OpenSky Network global position (\`global\_aircraft\_state\`).
     * **Threshold:** If discrepancy > 2.0 km, an alert is triggered.
 3.  **Physics Guard:** Filters out synthetic data (impossible Mach numbers, vertical rates).
 
@@ -136,23 +136,23 @@ This section defines the final data sources and storage schemas used in the Cent
 ### 1. Data Sources (Inputs)
 | Source | Function | Current Data Flow Status |
 | :--- | :--- | :--- |
-| **RPi4 Feeder (Local)** | Provides `aircraft.json` and `stats.json`. | 🟢 Stable |
-| **OpenSky Network (External)** | Provides `/states/all` via OAuth2 Bearer Token. | 🟢 Stable |
+| **RPi4 Feeder (Local)** | Provides \`aircraft.json\` and \`stats.json\`. | 🟢 Stable |
+| **OpenSky Network (External)** | Provides \`/states/all\` via OAuth2 Bearer Token. | 🟢 Stable |
 
 ### 2. Database Schema (InfluxDB)
-All analytical time-series data is stored in the `readsb` database.
+All analytical time-series data is stored in the \`readsb\` database.
 
 | Measurement Name | Data Source | Key Fields | Status |
 | :--- | :--- | :--- | :--- |
-| **`local\_aircraft\_state`** | RPi4 Feeder | `lat`, `lon`, `alt\_baro\_ft` | **Stable (Fixed 'ground' altitude)** |
-| **`global\_aircraft\_state`** | OpenSky OAuth2 | `lat`, `lon`, `baro\_alt\_m` | **Stable (Fixed 401 Auth Error)** |
-| **`local\_performance`** | RPi4 Feeder Stats | `signal\_db`, `messages` | **Stable** |
+| **\`local\_aircraft\_state\`** | RPi4 Feeder | \`lat\`, \`lon\`, \`alt\_baro\_ft\` | **Stable (Fixed 'ground' altitude)** |
+| **\`global\_aircraft\_state\`** | OpenSky OAuth2 | \`lat\`, \`lon\`, \`baro\_alt\_m\` | **Stable (Fixed 401 Auth Error)** |
+| **\`local\_performance\`** | RPi4 Feeder Stats | \`signal\_db\`, \`messages\` | **Stable** |
 
 ---
 
 ## 📂 Repository Structure
 
-```text
+${B}text
 .
 ├── DATA_DICTIONARY.md
 ├── LICENSE
@@ -167,7 +167,7 @@ All analytical time-series data is stored in the `readsb` database.
 ├── physics-guard/         # Original Logic (now integrated into spoof-detector)
 ├── runway-tracker/        # Original Logic (now integrated into spoof-detector)
 └── spoof-detector/        # Watchdog 2.0 (Main Analyzer)
-```
+${B}
 
 ---
 
@@ -182,13 +182,13 @@ All analytical time-series data is stored in the `readsb` database.
 ## 🛠 Deployment
 
 1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
-    * `LAT`, `LON`, `INFLUX\_USER`, `INFLUX\_PASSWORD`, `GRAFANA\_PASSWORD`
-    * **OAuth2 Credentials:** `OPENSKY\_CLIENT\_ID` and `OPENSKY\_CLIENT\_SECRET` (Mandatory for API access).
+    * \`LAT\`, \`LON\`, \`INFLUX\_USER\`, \`INFLUX\_PASSWORD\`, \`GRAFANA\_PASSWORD\`
+    * **OAuth2 Credentials:** \`OPENSKY\_CLIENT\_ID\` and \`OPENSKY\_CLIENT\_SECRET\` (Mandatory for API access).
 
 2.  **Deployment:** Push the current repository to your Balena application.
-    ```bash
+    ${B}bash
 balena push central
-```
+${B}
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
