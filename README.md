@@ -19,14 +19,12 @@
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
 ### 📡 Node 1: The Sensor (RPi 4)
-* **IP:** 192.168.1.152
 * **Role:** Dedicated Signal Capture (SIGINT).
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
 * **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
 * **Function:** Decodes raw 1090MHz RF signals into Beast binary format and streams it over TCP. No local processing to minimize noise.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
-* **IP:** 192.168.1.134
 * **Role:** Aggregation, Logic & AI.
 * **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
 * **Function:**
@@ -131,16 +129,14 @@ The core logic is handled by the ```spoof-detector``` container, which runs thre
 ```text
 .
 ├── assets/                     # Images & diagrams
-│   ├── coverage-map.jpg
-│   └── runways.png (Optional)
 ├── docker-compose.yml          # Service Orchestration
 ├── spoof-detector              # Watchdog 2.0 (The Brain)
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── watchdog.py             # Main Logic (Threaded)
-├── physics-guard               # (Legacy) Reference Physics Module
+├── physics-guard               # (Reference) Original standalone logic (Merged into Watchdog)
 │   └── guard.py
-└── runway-tracker              # (Legacy) Reference ML Labeler
+└── runway-tracker              # (Reference) Original standalone logic (Merged into Watchdog)
     └── src/
 ```
 
