@@ -1,3 +1,4 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 # Secure Skies: ADS-B Integrity & Spoofing Detection
 
 ![Status](https://img.shields.io/badge/Status-Data_Ingestion-green?style=flat-square)
@@ -143,3 +144,5 @@ This project builds upon open-source research and existing Balena blocks.
 ```bash
 balena push <app-name>
 ```
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
