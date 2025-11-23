@@ -3,7 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
+![Python](https://imgles.io/badge/Python-3.11-yellow?style=flat-square)
 ![Last Updated](https://img.shields.io/badge/Last%20Updated-2025--11--24-orange?style=flat-square)
 
 **Location:** HEL-ARN Corridor (Focus: EFHK)  
@@ -182,7 +182,7 @@ All analytical time-series data is stored in the `readsb` database.
 ## 🛠 Deployment
 
 1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
-    * `LAT`, `LON`, `INFLUX\_USER`, `INFLUX\_PASSWORD`, `GRAFANA\_PASSWORD`
+    * **Variables:** `LAT`, `LON`, `INFLUX\_USER`, `INFLUX\_PASSWORD`, `GRAFANA\_PASSWORD`
     * **OAuth2 Credentials:** `OPENSKY\_CLIENT\_ID` and `OPENSKY\_CLIENT\_SECRET` (Mandatory for API access).
 
 2.  **Deployment:** Push the current repository to your Balena application.
