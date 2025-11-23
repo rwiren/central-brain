@@ -14,42 +14,39 @@
 
 ---
 
-## 📐 System Architecture
-
-This project utilizes a distributed edge architecture. The **RPi4** acts as the forward-deployed SIGINT sensor (RF capture), while the **RPi5** serves as the "Central Brain" for heavy data processing, ML feature engineering, and storage.
+## 📐 System Flow
+This architecture treats the RPi4 as a "dumb" sensor (Forward Edge) and the RPi5 as the "intelligent" processor (Central Brain).
 
 ```mermaid
-graph TD
-    %% Hardware Layer
-    subgraph H_LAYER [Hardware Layer]
-        ANT[1090MHz Antenna] --> SDR[RTL-SDR Dongle]
-        SDR --> READSB(Container: readsb)
+graph LR
+    %% 1. Sensing Layer
+    subgraph SENSOR [RPi4: The Sensor]
+        WAVES((Radio Waves)) --> ANT[Antenna]
+        ANT --> DECODER[Signal Decoder]
     end
 
-    %% Logic Layer
-    subgraph L_LAYER [Logic Layer: Python Feature Engineering]
-        READSB -->|JSON Stream| TRACKER[Runway Tracker]
-        READSB -->|JSON Stream| SPOOF[Spoof Detector]
-        READSB -->|JSON Stream| GUARD[Physics Guard]
+    %% 2. Intelligence Layer
+    subgraph BRAIN [RPi5: The Brain]
+        DECODER -->|Stream| PHYSICS[Runway Tracker]
+        DECODER -->|Stream| DETECT[Spoof Detector]
         
-        TRACKER --"Label: Landing"--> INFLUX[(InfluxDB 1.8)]
-        TRACKER --"Event: Takeoff"--> MQTT{MQTT Broker}
-        
-        SPOOF --"Validation"--> OPENSKY((OpenSky API))
-        SPOOF --"Alert: Anomaly"--> MQTT
-        
-        GUARD --"Alert: Impossible Physics"--> MQTT
+        PHYSICS -->|Label: Landing| DB[(Flight Database)]
+        DETECT -->|Alert: Anomaly| ALERT[Alert System]
     end
 
-    %% Data Layer
-    subgraph D_LAYER [Data & Viz]
-        INFLUX --> GRAFANA(Grafana Dashboards)
+    %% 3. Validation Layer
+    subgraph CLOUD [External Validation]
+        DETECT -.->|Cross-Check| OPENSKY[OpenSky Network]
     end
-    
-    style H_LAYER fill:#f9f9f9,stroke:#333,stroke-width:2px
-    style L_LAYER fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    style D_LAYER fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style OPENSKY fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+
+    %% 4. Visualization
+    DB --> DASH[Dashboard]
+
+    %% Styling
+    style SENSOR fill:#f9f9f9,stroke:#333
+    style BRAIN fill:#e1f5fe,stroke:#0277bd
+    style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+    style ALERT fill:#ffebee,stroke:#c62828
 ```
 
 ---
@@ -57,7 +54,7 @@ graph TD
 ## 📂 Repository Structure
 ```text
 .
-├── docker-compose.yml          # Orchestration for RPi5 Central Brain
+├── docker-compose.yml          # Orchestration
 ├── physics-guard               # Logic: Detects Mach 2 anomalies
 │   ├── Dockerfile
 │   ├── guard.py
@@ -74,14 +71,6 @@ graph TD
 
 ---
 
-## 🏗 Modular Functions
-
-1.  **Ingestion (SIGINT):** Captures raw 1090MHz RF data via `readsb`.
-2.  **Labeling (Runway Tracker):** A physics engine that tags flights as "Landing" or "Takeoff" based on precise runway threshold logic. This generates the **Ground Truth** labels for the ML model.
-3.  **Validation (Spoof Detector):** Compares local RF data against global OpenSky Network data to detect inconsistencies.
-
----
-
 ## 📔 Project Journal
 
 ### [2025-11-23] Phase 1: Infrastructure & Data Engineering
@@ -92,16 +81,16 @@ graph TD
 
 ---
 
-## 📚 Inspiration & References
-This project builds upon research into air traffic security and sensor fusion.
-* **ADS-B Security Vulnerabilities:** [YouTube: Defeating ADS-B](https://www.youtube.com/watch?v=51zEjso9kZw)
-* **OpenSky Network Research:** [Publications](https://opensky-network.org/about/publications)
+## 📚 Acknowledgements & References
+This project builds upon open-source research and existing Balena blocks.
+
+* **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file) - Excellent foundation for containerized SDR.
+* **Data Validation:** [OpenSky Network Config](https://github.com/ketilmo/balena-ads-b?tab=readme-ov-file#part-6--configure-opensky-network) - We utilize their API for ground-truth verification.
+* **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
 
 ---
 
 ## 🛠 Deployment
-This project is designed for BalenaOS.
-
 ```bash
 balena push <app-name>
 ```
