@@ -112,7 +112,6 @@ services:
   # 6. PHYSICS GUARD (Legacy Reference - Optional)
   # ============================================================================
   # Kept for reference, but logic is now inside spoof-detector.
-  # To save CPU, we can leave this commented out or keep it running idle.
   physics-guard:
     build: ./physics-guard
     restart: always
