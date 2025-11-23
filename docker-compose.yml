@@ -1,149 +1,126 @@
-# Define backtick variable
-B='```'
+version: '2.1'
 
-cat <<EOF > README.md
-# Secure Skies: ADS-B Integrity & Spoofing Detection
+volumes:
+  influxdb-data:
+  grafana-data:
+  readsb-data:
+  mosquitto-data:
 
-![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.9-yellow?style=flat-square)
+services:
+  # ============================================================================
+  # 1. MQTT BROKER (Notifications & Alerts)
+  # ============================================================================
+  mqtt:
+    image: eclipse-mosquitto:latest
+    network_mode: host
+    restart: always
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      # - ./mosquitto/config:/mosquitto/config # Uncomment if you add custom config
 
-**Location:** HEL-ARN Corridor (Focus: EFHK)  
-**Author:** RW
+  # ============================================================================
+  # 2. AGGREGATOR (ReadsB - Net Only)
+  # ============================================================================
+  readsb:
+    image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
+    network_mode: host
+    privileged: true
+    environment:
+      - TZ=Europe/Helsinki
+      
+      # --- HARDWARE MODE: NETWORK ONLY ---
+      - READSB_NET_ONLY=true
+      - READSB_NET_ENABLE=true
+      
+      # --- SOURCE: RPi4 FEEDER ---
+      # Connects to RPi4 (1.152) on port 30005 (Beast)
+      - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
 
-## 📖 Project Overview
-**Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
+      # --- SMOOTHING & PERFORMANCE ---
+      # Reduces "jitter" by buffering network packets slightly
+      - READSB_NET_BUFFER=2
+      # Updates JSON faster for the Watchdog script (default is 5s)
+      - READSB_WRITE_JSON_EVERY=1
+      
+      # --- OUTPUTS ---
+      - READSB_WEB_ENABLE=true
+      - READSB_NET_BEAST_INPUT_PORT=30004
+      - READSB_NET_BEAST_OUTPUT_PORT=30005
+      - READSB_NET_SBS_OUTPUT_PORT=30003
+      
+      # --- LOCATION ---
+      - READSB_LAT=${LAT}
+      - READSB_LON=${LON}
+      
+      # --- INFLUXDB INTEGRATION ---
+      - INFLUXDBURL=http://127.0.0.1:8086
+      - INFLUXDBNAME=readsb
+      - INFLUXDB_DB=readsb
+      - INFLUXDBUSERNAME=${INFLUX_USER}
+      - INFLUXDBPASSWORD=${INFLUX_PASSWORD}
+    volumes:
+      - readsb-data:/var/lib/readsb/pb
 
-**Goal:** Detect flight anomalies in real-time by comparing local RF data against global "truth" networks and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
+  # ============================================================================
+  # 3. DATABASE (InfluxDB)
+  # ============================================================================
+  influxdb:
+    image: influxdb:1.8
+    network_mode: host
+    environment:
+      - INFLUXDB_DB=readsb
+      - INFLUXDB_ADMIN_ENABLED=true
+      - INFLUXDB_ADMIN_USER=${INFLUX_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUX_PASSWORD}
+    volumes:
+      - influxdb-data:/var/lib/influxdb
 
----
+  # ============================================================================
+  # 4. DASHBOARD (Grafana)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
 
-## 🔭 Hardware Architecture
-This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
+  # ============================================================================
+  # 5. WATCHDOG 2.0 (Spoof Detector + Physics + Runways)
+  # ============================================================================
+  spoof-detector:
+    build: ./spoof-detector
+    restart: always
+    network_mode: host
+    environment:
+      # OpenSky Credentials (for global truth)
+      - OPENSKY_USER=${OPENSKY_USERNAME}
+      - OPENSKY_PASS=${OPENSKY_PASSWORD}
+      
+      # Internal Connections
+      - MQTT_BROKER=127.0.0.1
+      - MQTT_PORT=1883
+      - LOCAL_READSB_URL=http://127.0.0.1:8080/data/aircraft.json
+      
+      # Geography
+      - MY_LAT=${LAT}
+      - MY_LON=${LON}
 
-### 📡 Node 1: The Sensor (RPi 4)
-* **IP:** 192.168.1.152
-* **Role:** Dedicated Signal Capture (SIGINT).
-* **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
-* **Placement:** **11th Floor** window facing Helsinki-Vantaa (EFHK).
-* **Function:** Decodes raw 1090MHz RF signals into Beast binary format and streams it over TCP. No local processing to minimize noise.
-
-### 🧠 Node 2: The Central Brain (RPi 5)
-* **IP:** 192.168.1.134
-* **Role:** Aggregation, Logic & AI.
-* **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
-* **Function:**
-    * Ingests stream from Node 1.
-    * Runs **Watchdog 2.0** (Anomaly Detection).
-    * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
-    * Detects "Ghost Planes" via OpenSky Network cross-referencing.
-
----
-
-## 🗺️ Receiver Coverage
-
-![Receiver Coverage Map](coverage_map.jpg)
-
-*Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846)*
-
-This map plots the range of the receiver. The dotted lines represent the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet taking into account obstructions from 
-terrain.
-
----
-
-## 📐 System Data Flow
-
-${B}mermaid
-graph LR
-    %% 1. Sensing Layer (RPi 4)
-    subgraph SENSOR [Node 1: Forward Sensor]
-        AIR((RF Signals)) --> ANT[Antenna]
-        ANT --> SDR[RTL-SDR]
-        SDR --> FEEDER[Readsb Feeder]
-    end
-
-    %% 2. Intelligence Layer (RPi 5)
-    subgraph BRAIN [Node 2: Central Brain]
-        FEEDER -->|TCP Port 30005| AGG[Readsb Aggregator]
-        AGG -->|JSON API| WATCH[Watchdog 2.0]
-        
-        WATCH -->|Metrics| DB[(InfluxDB)]
-        WATCH -->|Alerts| MQTT[MQTT Broker]
-        
-        subgraph AI_MODULES [Logic Engines]
-            WATCH --> TRACK[Runway Tracker]
-            WATCH --> GUARD[Physics Guard]
-            WATCH --> SPOOF[Spoof Detector]
-        end
-    end
-
-    %% 3. Validation Layer (Cloud)
-    subgraph CLOUD [External Truth]
-        OPENSKY[OpenSky Network]
-    end
-
-    %% 4. Viz Layer
-    OPENSKY -.->|Validation| SPOOF
-    DB --> DASH[Grafana Dashboard]
-
-    %% Styling
-    style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
-    style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-${B}
-
----
-
-## 🛡️ Security Modules (Watchdog 2.0)
-
-The core logic is handled by the ${B}spoof-detector${B} container, which runs three parallel threads:
-
-1.  **Runway Logic:**
-    * Detects if a plane is aligned with EFHK runways (22L/04R, 22R/04L, 15/33).
-    * Identifies **Go-Arounds** (Low altitude + High positive vertical rate).
-    * Identifies **Rejected Takeoffs** (High speed on ground -> Zero speed).
-
-2.  **Spoof Detection:**
-    * **Distance Check:** Compares local RPi4 signal position vs. OpenSky Network global position.
-    * **Threshold:** If discrepancy > 2.0 km, the target is flagged as a potential spoofer.
-
-3.  **Physics Guard:**
-    * Monitors for "Impossible Kinematics" (e.g., speed > 1,225 km/h ([Mach 1](https://en.wikipedia.org/wiki/Mach_number))).
-
----
-
-## 📂 Repository Structure
-${B}text
-.
-├── coverage_map.jpg            # Coverage visualization
-├── docker-compose.yml          # Service Orchestration
-├── spoof-detector              # Watchdog 2.0 (The Brain)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── watchdog.py             # Main Logic (Threaded)
-├── physics-guard               # (Legacy) Standalone Physics Module
-│   └── guard.py
-└── runway-tracker              # (Legacy) Standalone ML Labeler
-    └── src/
-${B}
-
----
-
-## 🛠 Deployment
-
-${B}bash
-# 1. Clone the repo
-git clone [https://github.com/rwiren/central-brain.git](https://github.com/rwiren/central-brain.git)
-
-# 2. Set Env Variables in Balena Dashboard
-# LAT, LON, OPENSKY_USER, OPENSKY_PASS
-
-# 3. Deploy
-balena push central
-${B}
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-EOF
+  # ============================================================================
+  # 6. PHYSICS GUARD (Legacy Reference - Optional)
+  # ============================================================================
+  # Kept for reference, but logic is now inside spoof-detector.
+  # To save CPU, we can leave this commented out or keep it running idle.
+  physics-guard:
+    build: ./physics-guard
+    restart: always
+    network_mode: host
+    environment:
+      - READSB_HOST=127.0.0.1
+      - READSB_PORT=30003
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_DB=readsb
+      - INFLUX_USER=${INFLUX_USER}
+      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
