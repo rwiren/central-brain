@@ -11,7 +11,7 @@
 ## 📖 Project Overview
 **Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
 
-**Goal:** Detect flight anomalies in real-time by comparing local RF data against global "truth" networks and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
+**Goal:** Detect flight anomalies in real-time by comparing local RF data against global reference networks and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
 
 ---
 
@@ -63,42 +63,47 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ```mermaid
 graph LR
-    %% 1. Sensing Layer (RPi 4)
-    subgraph SENSOR [Node 1: Forward Sensor]
+    %% 1. Sensing Layer
+    subgraph SENSOR [Node 1: Sensor]
         AIR((RF Signals)) --> ANT[Antenna]
         ANT --> SDR[RTL-SDR]
         SDR --> FEEDER[Readsb Feeder]
     end
 
-    %% 2. Intelligence Layer (RPi 5)
+    %% 2. Intelligence Layer
     subgraph BRAIN [Node 2: Central Brain]
         FEEDER -->|TCP Port 30005| AGG[Readsb Aggregator]
-        AGG -->|JSON API| WATCH[Watchdog 2.0]
         
-        WATCH -->|Metrics| DB[(InfluxDB)]
-        WATCH -->|Alerts| MQTT[MQTT Broker]
-        
-        subgraph AI_MODULES [Logic Engines]
-            WATCH --> TRACK[Runway Tracker]
-            WATCH --> GUARD[Physics Guard]
-            WATCH --> SPOOF[Spoof Detector]
+        %% The Watchdog Container
+        subgraph WATCHDOG_CONTAINER [Spoof Detector Container]
+            AGG -->|JSON API| LOGIC[Watchdog 2.0 Logic]
+            
+            %% Internal Logic Threads
+            LOGIC -.-> RUNWAY[Runway Logic]
+            LOGIC -.-> PHYSICS[Physics Guard]
+            LOGIC -.-> SPOOF[Spoof Check]
         end
+
+        %% Outputs
+        LOGIC -->|Metrics| DB[(InfluxDB)]
+        LOGIC -->|Alerts| MQTT[MQTT Broker]
     end
 
-    %% 3. Validation Layer (Cloud)
-    subgraph CLOUD [External Truth]
+    %% 3. Reference Layer
+    subgraph REF [External Reference]
         OPENSKY[OpenSky Network]
     end
 
     %% 4. Viz Layer
-    OPENSKY -.->|Validation| SPOOF
+    OPENSKY -.->|HTTP API| SPOOF
     DB --> DASH[Grafana Dashboard]
 
     %% Styling
     style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
     style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style CLOUD fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+    style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
     style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style WATCHDOG_CONTAINER fill:#ffffff,stroke:#333,stroke-width:1px
 ```
 
 ---
