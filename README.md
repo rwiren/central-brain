@@ -62,7 +62,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ## 📐 System Data Flow
 
 ```mermaid
-graph LR
+graph TD
     %% 1. Sensing Layer
     subgraph SENSOR [Node 1: Sensor]
         AIR((RF Signals)) --> ANT[Antenna]
@@ -72,38 +72,38 @@ graph LR
 
     %% 2. Intelligence Layer
     subgraph BRAIN [Node 2: Central Brain]
-        FEEDER -->|TCP Port 30005| AGG[Readsb Aggregator]
+        FEEDER -->|TCP Stream| AGG[Readsb Aggregator]
+        AGG -->|JSON API| WD[Watchdog Script]
         
-        %% The Watchdog Container
-        subgraph WATCHDOG_CONTAINER [Spoof Detector Container]
-            AGG -->|JSON API| LOGIC[Watchdog 2.0 Logic]
-            
-            %% Internal Logic Threads
-            LOGIC -.-> RUNWAY[Runway Logic]
-            LOGIC -.-> PHYSICS[Physics Guard]
-            LOGIC -.-> SPOOF[Spoof Check]
+        %% Logic Flow
+        subgraph LOGIC [Logic Engines]
+            WD -.-> TRACK[Runway Tracker]
+            WD -.-> PHYS[Physics Guard]
+            WD -.-> SPOOF[Spoof Detector]
         end
 
-        %% Outputs
-        LOGIC -->|Metrics| DB[(InfluxDB)]
-        LOGIC -->|Alerts| MQTT[MQTT Broker]
+        %% Actions / Outputs
+        TRACK -->|Events| DB[(InfluxDB)]
+        PHYS -->|Alerts| MQTT[MQTT Broker]
+        SPOOF -->|Alerts| MQTT
+        SPOOF -->|Metrics| DB
     end
 
     %% 3. Reference Layer
     subgraph REF [External Reference]
-        OPENSKY[OpenSky Network]
+        OS[OpenSky Network]
     end
 
-    %% 4. Viz Layer
-    OPENSKY -.->|HTTP API| SPOOF
+    %% 4. Visualization
+    OS -.->|HTTP Check| SPOOF
     DB --> DASH[Grafana Dashboard]
 
     %% Styling
-    style SENSOR fill:#f9f9f9,stroke:#666,stroke-width:2px
-    style BRAIN fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style SENSOR fill:#f9f9f9,stroke:#666
+    style BRAIN fill:#e3f2fd,stroke:#1565c0
     style REF fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
-    style DASH fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style WATCHDOG_CONTAINER fill:#ffffff,stroke:#333,stroke-width:1px
+    style DASH fill:#e8f5e9,stroke:#2e7d32
+    style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
 
 ---
