@@ -4,23 +4,10 @@ volumes:
   influxdb-data:
   grafana-data:
   readsb-data:
-  mosquitto-data: # Added for MQTT persistence (optional but good practice)
 
 services:
   # ============================================================================
-  # 1. MQTT BROKER (New - Required for Alerts)
-  # ============================================================================
-  mqtt:
-    image: eclipse-mosquitto:latest
-    network_mode: host
-    restart: always
-    volumes:
-      - mosquitto-data:/mosquitto/data
-      # If you have a custom config, uncomment below:
-      # - ./mosquitto/config:/mosquitto/config
-
-  # ============================================================================
-  # 2. AGGREGATOR (ReadsB - Net Only)
+  # 1. AGGREGATOR (ReadsB - Net Only)
   # ============================================================================
   readsb:
     image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
@@ -31,13 +18,6 @@ services:
       - READSB_NET_ONLY=true
       - READSB_NET_ENABLE=true
       
-      # --- CRITICAL UPDATE: Connect to RPi4 ---
-      # Pulls Beast data from RPi4 (192.168.1.134)
-      - READSB_NET_CONNECTOR=192.168.1.134,30005,beast_in
-
-      # --- CRITICAL UPDATE: Enable JSON API for Watchdog ---
-      - READSB_WEB_ENABLE=true
-      
       # Ports
       - READSB_NET_BEAST_INPUT_PORT=30004
       - READSB_NET_BEAST_OUTPUT_PORT=30005
@@ -47,7 +27,8 @@ services:
       - READSB_LAT=${LAT}
       - READSB_LON=${LON}
       
-      # --- INFLUXDB CONFIG ---
+      # --- INFLUXDB CONFIG (Cleaned) ---
+      # We align with the container's default DB name: "readsb"
       - INFLUXDBURL=http://127.0.0.1:8086
       - INFLUXDBNAME=readsb
       - INFLUXDB_DB=readsb
@@ -57,7 +38,7 @@ services:
       - readsb-data:/var/lib/readsb/pb
 
   # ============================================================================
-  # 3. DATABASE (InfluxDB)
+  # 2. DATABASE (InfluxDB)
   # ============================================================================
   influxdb:
     image: influxdb:1.8
@@ -72,7 +53,7 @@ services:
       - influxdb-data:/var/lib/influxdb
 
   # ============================================================================
-  # 4. DASHBOARD (Grafana)
+  # 3. DASHBOARD (Grafana)
   # ============================================================================
   grafana:
     image: grafana/grafana:latest
@@ -84,39 +65,33 @@ services:
       - grafana-data:/var/lib/grafana
 
   # ============================================================================
-  # 5. SPOOF DETECTOR (Python AI)
+  # 4. SPOOF DETECTOR (Python AI)
   # ============================================================================
   spoof-detector:
     build: ./spoof-detector
     restart: always
     network_mode: host
     environment:
-      # OpenSky Credentials
-      - OPENSKY_USER=${OPENSKY_USERNAME}
-      - OPENSKY_PASS=${OPENSKY_PASSWORD}
-      
-      # Connection details matching the new watchdog.py
-      - MQTT_BROKER=127.0.0.1
-      - MQTT_PORT=1883
-      # Connects to the local readsb web server we just enabled
-      - LOCAL_READSB_URL=http://127.0.0.1:8080/data/aircraft.json
-      
-      # Coordinates for OpenSky bounding box
-      - MY_LAT=${LAT}
-      - MY_LON=${LON}
+      - OPENSKY_USERNAME=${OPENSKY_USERNAME}
+      - OPENSKY_PASSWORD=${OPENSKY_PASSWORD}
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_DB=readsb  # <--- Updated to match
+      - READSB_HOST=127.0.0.1
+      - READSB_PORT=30003
+      - INFLUX_USER=${INFLUX_USER}
+      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
 
   # ============================================================================
-  # 6. PHYSICS GUARD (Physics Engine)
+  # 5. PHYSICS GUARD (Physics Engine)
   # ============================================================================
   physics-guard:
     build: ./physics-guard
     restart: always
     network_mode: host
     environment:
-      # Still connects to port 30003 (SBS) which Readsb provides
       - READSB_HOST=127.0.0.1
       - READSB_PORT=30003
       - INFLUX_HOST=127.0.0.1
-      - INFLUX_DB=readsb
+      - INFLUX_DB=readsb  # <--- Updated to match
       - INFLUX_USER=${INFLUX_USER}
       - INFLUX_PASSWORD=${INFLUX_PASSWORD}

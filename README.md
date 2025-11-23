@@ -1,6 +1,7 @@
 # Secure Skies: ADS-B Integrity & Spoofing Detection
 
 ![Status](https://img.shields.io/badge/Status-Data_Ingestion-green?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
 
