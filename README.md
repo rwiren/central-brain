@@ -17,6 +17,8 @@
 - [System Data Flow](#-system-data-flow)
 - [Security Modules](#-security-modules-watchdog-20)
 - [Data Schema (InfluxDB)](#-data-schema-influxdb)
+- [Grafana Dashboards](#-grafana-dashboards)
+- [MLAT / TDoA Verification](#-mlat--tdoa-verification)
 - [Receiver Coverage](#-receiver-coverage)
 - [Deployment](#-deployment)
 
@@ -214,6 +216,27 @@ Metrics regarding the performance of the hardware, signal reception, and the dec
 ### ⚠️ Legacy Note
 **Measurement: `aircraft`**
 This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). For analysis and dashboards, it is recommended to use `local_aircraft_state` as field names are normalized and consistent.
+
+---
+
+## 📊 Grafana Dashboards
+*Visualization of real-time flight telemetry, spoofing alerts, and system health.*
+
+🚧 **Documentation Pending:** This section will detail the specific dashboards used to visualize the `readsb` database, including:
+* **Spoofing Alert Heatmap:** Visualizing `is_spoofed` events geographically.
+* **Signal Integrity:** Correlating `signal_db` with distance to detect anomalies.
+* **Drift Analysis:** Plotting `lat_error` and `lon_error` over time.
+
+---
+
+## 📡 MLAT / TDoA Verification
+*Independent position verification using Time Difference of Arrival (TDoA) analysis.*
+
+🚧 **Work in Progress:** We are currently implementing Multilateration (MLAT) to counter GPS spoofing.
+
+**Concept:** By calculating the time difference of signal arrival at multiple synchronized receivers (Node 1 + Community Feeders), we can mathematically triangulate the aircraft's position independent of the GPS coordinates reported in the ADS-B message. This serves as a secondary "Truth Source" alongside OpenSky.
+
+---
 
 ## 🗺️ Receiver Coverage
 
