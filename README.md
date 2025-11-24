@@ -42,15 +42,6 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 * **Role:** Aggregation, Logic, Analytics & OAuth2 Handler.
 * **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
 * **Function:**
-    * Ingests Beast stream from Node 1.
-    * Runs **Watchdog 2.0** (Anomaly Detection).
-    * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
-    * **OAuth2 Integration:** Implements the OAuth2 Client Credentials Flow to reliably fetch global truth data from OpenSky.
-
-### 🧠 Node 2: The Central Brain (RPi 5)
-* **Role:** Aggregation, Logic, Analytics & OAuth2 Handler.
-* **Hardware:** Raspberry Pi 5 (16GB RAM) + 1TB NVMe.
-* **Function:**
     * Ingests Beast stream from Node 1.
     * Runs **Watchdog 2.0** (Anomaly Detection).
     * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
