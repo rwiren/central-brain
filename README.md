@@ -218,6 +218,9 @@ Metrics regarding the performance of the hardware, signal reception, and the dec
 **Measurement: `aircraft`**
 This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). For analysis and dashboards, it is recommended to use `local_aircraft_state` as field names are normalized and consistent.
 
+**[👉 View Full Data Schema on Wiki](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
+*Detailed breakdown of InfluxDB measurements (`local_aircraft_state`, `integrity_check`), field keys, and data types.*
+
 ---
 
 ## 📊 Grafana Dashboards
