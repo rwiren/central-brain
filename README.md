@@ -5,6 +5,7 @@
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
 ![Last Updated](https://img.shields.io/badge/Last%20Updated-2025--11--24-orange?style=flat-square)
+[![Wiki](https://img.shields.io/badge/Docs-Project%20Wiki-purple?style=flat-square)](https://github.com/rwiren/central-brain/wiki)
 
 **Location:** HEL-ARN Corridor (Focus: EFHK)  
 **Author:** RW
