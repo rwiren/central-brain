@@ -111,45 +111,6 @@ The core logic is handled by the ```spoof-detector``` container, which runs the 
 
 ## 📘 Data Schema (InfluxDB)
 
-The three primary time-series measurements written by the `adsb-feeders` service are: `local_performance`, `local_aircraft_state`, and `global_aircraft_state`.
-
-### ✈️ Measurement: `local\_aircraft\_state`
-*Stores real-time, validated aircraft position and kinematic data from the local RPi4 sensor.*
-
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `lat`, `lon` | Float | Aircraft Position (WGS84). |
-| `alt_baro_ft` | Integer | Barometric Altitude (Feet). |
-| `gs_knots` | Float | Ground Speed (Knots). |
-| `v_rate_fpm` | Integer | Vertical Rate (ft/min). |
-| `track` | Float | True track over ground (degrees). |
-| `origin_data` | String | Source tag: `"LocalReadsb"`. |
-
-### 🌍 Measurement: `global_aircraft\_state`
-*Stores external, global truth position data fetched via the OpenSky Network API.*
-
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `lat`, `lon` | Float | Aircraft Position (WGS84). |
-| `baro_alt_m` | Float | Barometric Altitude (Meters). |
-| `gs_mps` | Float | Ground Speed (Meters/sec). |
-| `vr_mps` | Float | Vertical Rate (Meters/sec). |
-| `origin_data` | String | Source tag: `"OpenSky"`. |
-
-### 📊 Measurement: `local_performance`
-*Stores health and performance metrics for the receiver itself.*
-
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `messages` | Integer | Messages decoded per second/interval. |
-| `signal_db` | Float | Average signal strength. |
-| `cpu_sec` | Float | CPU utilization of the decoder process. |
-| `strong_signals` | Integer | Number of strong signals processed. |
-
----
-
-## 📘 Data Schema (InfluxDB)
-
 All time-series data is stored in the `readsb` database. The measurements are categorized into three groups: **Tracking Data** (for comparison), **Analysis & Detection** (for spoofing logic), and **System Health**.
 
 ### 1. Tracking Data (Comparison Sources)
