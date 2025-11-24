@@ -224,6 +224,41 @@ This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). 
 
 ---
 
+## 📘 Data Schema (InfluxDB)
+
+The system stores real-time flight telemetry in the `readsb` database. While the full schema handles over 30 distinct data points, we focus on two primary categories for detection: **Integrity** and **Performance**.
+
+### 🗝️ Key Metrics Snapshot
+
+**1. The "Hunter" Metrics (Security)**
+*Used to detect anomalies, spoofing, and impossible flight maneuvers.*
+
+| Measurement | Key Field | Description |
+| :--- | :--- | :--- |
+| `integrity_check` | **`is_spoofed`** | Binary Alert (`1` = Spoofed). Triggered when `lat_error` > 2.0km. |
+| `integrity_check` | `lat_error` | The calculated distance (km) between the local signal and global truth. |
+| `flight_ops` | **`event_score`** | Risk accumulator. Increases when physics rules (Mach 1, Vertical Rate) are broken. |
+
+**2. The "Sensor" Metrics (Hardware)**
+*Used to monitor the health of the RTL-SDR receiver.*
+
+| Measurement | Key Field | Description |
+| :--- | :--- | :--- |
+| `local_performance` | **`signal_db`** | Signal Strength (RSSI). Monitor this for antenna degradation or jamming. |
+| `local_performance` | `strong_signals` | Count of signals saturating the receiver (Gain too high). |
+| `local_performance` | `messages` | Total message rate (Traffic volume). |
+
+---
+
+📚 **Full Documentation on Wiki**
+
+For the complete data dictionary, including **Unit Conversions** (Knots vs m/s), **Data Types**, and **Sample InfluxQL Queries**, please consult the Wiki:
+
+**👉 [View Full Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
+
+---
+
+
 ## 📊 Grafana Dashboards
 *Visualization of real-time flight telemetry, spoofing alerts, and system health.*
 
