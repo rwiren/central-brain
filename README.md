@@ -100,12 +100,21 @@ graph LR
 
 ## 🛡️ Security Modules (Watchdog 2.0)
 
-The core logic is handled by the ```spoof-detector``` container, which runs the following checks using data ingested by the ```adsb-feeders``` service:
+The core logic is handled by the `spoof-detector` container. It ingests real-time data from `adsb-feeders`, performs cross-verification, and writes the results to the `integrity_check` and `flight_ops` measurements.
 
-1.  **Runway Logic:** Detects alignment with known runways (EFHK).
-2.  **Spoof Detection (Primary):** Compares local RPi4 signal position (`local\_aircraft\_state`) against OpenSky Network global position (`global\_aircraft\_state`).
-    * **Threshold:** If discrepancy > 2.0 km, an alert is triggered.
-3.  **Physics Guard:** Filters out synthetic data (impossible Mach numbers, vertical rates).
+1. **Runway Logic (Geofencing)**
+   * **Function:** Detects alignment with known runways (e.g., EFHK) using spatial polygons.
+   * **Output:** Enriches `flight_ops` with proximity data (`distance_km`, `bearing_deg`).
+
+2. **Spoof Detection (Primary)**
+   * **Function:** Calculates the Euclidean distance between the Local RPi sensor (`local_aircraft_state`) and the OpenSky Network "truth" (`global_aircraft_state`).
+   * **Logic:**
+     * Calculates deviations (`lat_error`, `lon_error`).
+     * **Threshold:** If deviation > **2.0 km**, the `is_spoofed` flag is set to `1` in the `integrity_check` measurement.
+
+3. **Physics Guard**
+   * **Function:** Filters out synthetic or impossible flight maneuvers.
+   * **Logic:** Monitors `gs_knots` and `v_rate_fpm` in `local_aircraft_state` for values exceeding airframe capabilities (e.g., impossible Mach numbers), contributing to the `event_score`.
 
 ---
 
