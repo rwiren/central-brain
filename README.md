@@ -45,7 +45,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
     * Ingests Beast stream from Node 1.
     * Runs **Watchdog 2.0** (Anomaly Detection).
     * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
-    * **OAuth2 Integration:** Implements the OAuth2 Client Credentials Flow to reliably fetch global truth data from OpenSky.
+    * **OAuth2 Integration:** Implements the [OAuth2 Client Credentials Flow](https://openskynetwork.github.io/opensky-api/rest.html#oauth2-client-credentials-flow) to reliably fetch global truth data from OpenSky.
 
 ---
 
