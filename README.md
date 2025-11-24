@@ -263,7 +263,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ```bash
 
-balena push central
+balena push <your fleet name>
 
 ```
 
