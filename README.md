@@ -119,11 +119,11 @@ The three primary time-series measurements written by the `adsb-feeders` service
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
 | `lat`, `lon` | Float | Aircraft Position (WGS84). |
-| `alt\_baro\_ft` | Integer | Barometric Altitude (Feet). |
-| `gs\_knots` | Float | Ground Speed (Knots). |
-| `v\_rate\_fpm` | Integer | Vertical Rate (ft/min). |
+| `alt_baro_ft` | Integer | Barometric Altitude (Feet). |
+| `gs_knots` | Float | Ground Speed (Knots). |
+| `v_rate_fpm` | Integer | Vertical Rate (ft/min). |
 | `track` | Float | True track over ground (degrees). |
-| `origin\_data` | String | Source tag: `"LocalReadsb"`. |
+| `origin_data` | String | Source tag: `"LocalReadsb"`. |
 
 ### 🌍 Measurement: `global\_aircraft\_state`
 *Stores external, global truth position data fetched via the OpenSky Network API.*
@@ -131,10 +131,10 @@ The three primary time-series measurements written by the `adsb-feeders` service
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
 | `lat`, `lon` | Float | Aircraft Position (WGS84). |
-| `baro\_alt\_m` | Float | Barometric Altitude (Meters). |
-| `gs\_mps` | Float | Ground Speed (Meters/sec). |
-| `vr\_mps` | Float | Vertical Rate (Meters/sec). |
-| `origin\_data` | String | Source tag: `"OpenSky"`. |
+| `baro_alt_m` | Float | Barometric Altitude (Meters). |
+| `gs_mps` | Float | Ground Speed (Meters/sec). |
+| `vr_mps` | Float | Vertical Rate (Meters/sec). |
+| `origin_data` | String | Source tag: `"OpenSky"`. |
 
 ### 📊 Measurement: `local\_performance`
 *Stores health and performance metrics for the receiver itself.*
@@ -142,9 +142,9 @@ The three primary time-series measurements written by the `adsb-feeders` service
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
 | `messages` | Integer | Messages decoded per second/interval. |
-| `signal\_db` | Float | Average signal strength. |
-| `cpu\_sec` | Float | CPU utilization of the decoder process. |
-| `strong\_signals` | Integer | Number of strong signals processed. |
+| `signal_db` | Float | Average signal strength. |
+| `cpu_sec` | Float | CPU utilization of the decoder process. |
+| `strong_signals` | Integer | Number of strong signals processed. |
 
 ---
 
@@ -200,12 +200,15 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ## 🛠 Deployment
 
 1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
-    * **Variables:** `LAT`, `LON`, `INFLUX\_USER`, `INFLUX\_PASSWORD`, `GRAFANA\_PASSWORD`
-    * **OAuth2 Credentials:** `OPENSKY\_CLIENT\_ID` and `OPENSKY\_CLIENT\_SECRET` (Mandatory for API access).
+    * **Variables:** `LAT`, `LON`, `INFLUX_USER`, `INFLUX_PASSWORD`, `GRAFANA_PASSWORD`
+    * **OAuth2 Credentials:** `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` (Mandatory for API access).
 
 2.  **Deployment:** Push the current repository to your Balena application.
-    ```bash
+
+```bash
+
 balena push central
+
 ```
 
 ## License
