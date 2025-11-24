@@ -100,21 +100,23 @@ graph LR
 
 ## 🛡️ Security Modules (Watchdog 2.0)
 
-The core logic is handled by the `spoof-detector` container. It ingests real-time data from `adsb-feeders`, performs cross-verification, and writes the results to the `integrity_check` and `flight_ops` measurements.
+The core logic is handled by the `spoof-detector` container. It ingests real-time data from `adsb-feeders`, performs cross-verification in parallel threads, and writes the results to the `integrity_check` and `flight_ops` measurements.
 
 1. **Runway Logic (Geofencing)**
-   * **Function:** Detects alignment with known runways (e.g., EFHK) using spatial polygons.
-   * **Output:** Enriches `flight_ops` with proximity data (`distance_km`, `bearing_deg`).
+   * **Goal:** Distinguish legitimate landings from low-altitude flyovers using vector geometry.
+   * **Reference:** [EFHK Aerodrome Chart (AIS Finland)](https://www.ais.fi/eaip/005-2025_2025_10_02/documents/Root_WePub/ANSFI/Charts/AD/EFHK/EF_AD_2_EFHK_MARK.pdf)
+   * **Logic:** Detects alignment with runways **22L/04R**, **22R/04L**, and **15/33**.
+   * **Output:** Enriches the `flight_ops` measurement with spatial data (`distance_km`, `bearing_deg`).
 
 2. **Spoof Detection (Primary)**
-   * **Function:** Calculates the Euclidean distance between the Local RPi sensor (`local_aircraft_state`) and the OpenSky Network "truth" (`global_aircraft_state`).
-   * **Logic:**
-     * Calculates deviations (`lat_error`, `lon_error`).
-     * **Threshold:** If deviation > **2.0 km**, the `is_spoofed` flag is set to `1` in the `integrity_check` measurement.
+   * **Function:** Cross-references the Local RPi sensor (`local_aircraft_state`) against the OpenSky Network "truth" (`global_aircraft_state`).
+   * **Logic:** Calculates the Euclidean distance deviation (`lat_error`, `lon_error`).
+   * **Threshold:** If the discrepancy > **2.0 km**, the `is_spoofed` flag is set to `1` in the `integrity_check` measurement.
 
 3. **Physics Guard**
-   * **Function:** Filters out synthetic or impossible flight maneuvers.
-   * **Logic:** Monitors `gs_knots` and `v_rate_fpm` in `local_aircraft_state` for values exceeding airframe capabilities (e.g., impossible Mach numbers), contributing to the `event_score`.
+   * **Function:** Filters out synthetic "ghost" data that violates airframe physics.
+   * **Logic:** Monitors `gs_knots` and `v_rate_fpm` in `local_aircraft_state` for impossible kinematics.
+   * **Threshold:** Flags values exceeding civilian traffic capabilities (e.g., > 1,225 km/h or [Mach 1](https://en.wikipedia.org/wiki/Mach_number)) and increments the `event_score`.
 
 ---
 
