@@ -228,7 +228,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ```text
 .
-├── DATA_DICTIONARY.md              # Deprecated, content merged into README.md
+├── DATA_DICTIONARY.md     # Deprecated, content merged into README.md
 ├── LICENSE
 ├── README.md
 ├── adsb-feeders/          # NEW: Handles data ingestion to InfluxDB (Local & OpenSky)
