@@ -111,7 +111,7 @@ The core logic is handled by the ```spoof-detector``` container, which runs the 
 
 ## 📘 Data Schema (InfluxDB)
 
-The three primary time-series measurements written by the `adsb-feeders` service are: `local\_performance`, `local\_aircraft\_state`, and `global\_aircraft\_state`.
+The three primary time-series measurements written by the `adsb-feeders` service are: `local_performance`, `local_aircraft_state`, and `global_aircraft_state`.
 
 ### ✈️ Measurement: `local\_aircraft\_state`
 *Stores real-time, validated aircraft position and kinematic data from the local RPi4 sensor.*
@@ -125,7 +125,7 @@ The three primary time-series measurements written by the `adsb-feeders` service
 | `track` | Float | True track over ground (degrees). |
 | `origin_data` | String | Source tag: `"LocalReadsb"`. |
 
-### 🌍 Measurement: `global\_aircraft\_state`
+### 🌍 Measurement: `global_aircraft\_state`
 *Stores external, global truth position data fetched via the OpenSky Network API.*
 
 | Field Key | Type | Description |
@@ -136,7 +136,7 @@ The three primary time-series measurements written by the `adsb-feeders` service
 | `vr_mps` | Float | Vertical Rate (Meters/sec). |
 | `origin_data` | String | Source tag: `"OpenSky"`. |
 
-### 📊 Measurement: `local\_performance`
+### 📊 Measurement: `local_performance`
 *Stores health and performance metrics for the receiver itself.*
 
 | Field Key | Type | Description |
