@@ -1,26 +1,31 @@
 import json
-import numpy as np 
-from scipy.optimize import least_squares
+import uuid
+import os
 import sys
-import os 
-from typing import List, Dict, Any 
-import math 
 
-# ==============================================================================
-# 1. DATA BLOCKS (Variables must be outside the function for clean JSON structure)
-# ==============================================================================
-
-# Configuration Block (Site Data - AMSL Altitudes)
+# --- DATA BLOCKS ---
 NODE_CONFIG_CODE = """
+# ==========================================
+# 1. CONFIGURATION: YOUR "CORE 4"
+# ==========================================
+# Coords: (Latitude, Longitude, Alt_AMSL_meters)
+# Altitudes are critical for the Z-axis (3D) lock stability.
+
 RECEIVERS = {
+    # Node 1: Jorvas (30m AMSL)
     "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (Rooftop)"}, 
+    
+    # Node 2: Keimola (130m AMSL - High Floor)
     "RX2": {"coords": (60.3196, 24.8295, 130.0), "name": "Keimola (11th Floor)"},
+    
+    # Node 3: Sipoo (60m AMSL - Rooftop)
     "RX3": {"coords": (60.3760, 25.2710, 60.0), "name": "Sipoo (Rooftop)"}, 
+
+    # Node 4: Eira (25m AMSL - Window)
     "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (Window)"}
 }
 """
 
-# Solver Logic Block
 SOLVER_CODE = """
 import numpy as np
 from scipy.optimize import least_squares
@@ -28,8 +33,9 @@ import math
 
 # Speed of Light
 C = 299792458.0  
+NOMINAL_AGL_HEIGHT = 25.0
 
-# --- MATH ENGINE (CONVERSION & SOLVER) ---
+# --- MATH ENGINE ---
 def lla_to_ecef(lat, lon, alt):
     a = 6378137.0; f = 1 / 298.257223563; e2 = 2*f - f**2
     lat_rad = np.radians(lat); lon_rad = np.radians(lon)
@@ -50,7 +56,7 @@ def ecef_to_lla(x, y, z):
     lon = np.arctan2(y, x)
     return np.degrees(lat), np.degrees(lon), alt
 
-# Cache Receiver Positions in ECEF
+# Cache Receiver Positions
 RX_KEYS = list(RECEIVERS.keys())
 RX_POSITIONS = np.array([lla_to_ecef(*RECEIVERS[k]["coords"]) for k in RX_KEYS])
 CENTER_LAT = np.mean([RECEIVERS[k]["coords"][0] for k in RX_KEYS])
@@ -101,47 +107,65 @@ if solution:
     diff_h = np.linalg.norm(np.array(target_lla[:2]) - np.array([calc_lat, calc_lon])) * 111000
     diff_v = abs(calc_alt - target_lla[2])
     
-    print("\n=== SOLVER DIAGNOSTICS ===")
+    print("\\n=== SOLVER DIAGNOSTICS ===")
     print(f"🎯 POSITION (LLA):     ({calc_lat:.4f}, {calc_lon:.4f}, {calc_alt:.1f}m)")
     print(f"📉 RELIABILITY (Cost): {cost:.2e}  <-- Close to zero means perfect intersection.")
     print(f"📏 HORIZ. ERROR:       {diff_h:.1f}m    <-- Positional accuracy on the map.")
     print(f"📏 VERTICAL ERROR:     {diff_v:.1f}m    <-- Altitude accuracy (Z-axis stability).")
 
     if diff_h < 50 and diff_v < 100:
-         print("\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
+         print("\\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
     else:
-         print("\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
+         print("\\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
 else:
     print("❌ SOLVER FAILED to converge.")
 """
 
 # ==============================================================================
-# 3. JSON GENERATION AND FILE WRITE
+# 4. JSON GENERATION (WITH IDS)
 # ==============================================================================
 def generate_final_notebook():
     notebook_content = {
      "cells": [
-      {"cell_type": "markdown", 
-       "source": ["# 🧮 Central Brain: MLAT Physics Engine\n", 
-                  "This tool verifies the stability of your Core-4 Helsinki network geometry using real AMSL altitudes. ",
-                  "Click the play button on the cell below to run the test!"]
+      {
+          "cell_type": "markdown", 
+          "metadata": {},
+          "source": ["# 🧮 Central Brain: MLAT Physics Engine\n", 
+                     "This tool verifies the stability of your Core-4 Helsinki network geometry using real AMSL altitudes. ",
+                     "Click the play button on the cell below to run the test!"],
+          "id": str(uuid.uuid4()) # <--- CRITICAL: Unique ID required by Colab
       },
-      {"cell_type": "code", "source": ["!pip install numpy scipy"], "execution_count": None},
-      # The main execution cell combining configuration and solver logic
-      {"cell_type": "code", "source": [NODE_CONFIG_CODE.strip(), "\n", SOLVER_CODE.strip()], "execution_count": None}
+      {
+          "cell_type": "code", 
+          "metadata": {},
+          "source": ["!pip install numpy scipy"], 
+          "execution_count": None,
+          "outputs": [],
+          "id": str(uuid.uuid4()) # <--- CRITICAL
+      },
+      {
+          "cell_type": "code", 
+          "metadata": {},
+          "source": [NODE_CONFIG_CODE.strip(), "\n", SOLVER_CODE.strip()], 
+          "execution_count": None,
+          "outputs": [],
+          "id": str(uuid.uuid4()) # <--- CRITICAL
+      }
      ],
-     "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}},
-     "nbformat": 4, "nbformat_minor": 4
+     "metadata": {
+         "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+         "language_info": {"codemirror_mode": {"name": "ipython", "version": 3}, "file_extension": ".py", "mimetype": "text/x-python", "name": "python", "nbconvert_exporter": "python", "pygments_lexer": "ipython3", 
+"version": "3.8.5"}
+     },
+     "nbformat": 4,
+     "nbformat_minor": 5 # Bumped to 4.5 to support IDs
     }
 
     # --- WRITE THE FILE ---
     try:
-        # Use os.path.join to ensure correct path construction
         output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlat_solver.ipynb")
-        
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(notebook_content, f, indent=1)
-            
         print(f"✅ Successfully created FINAL mlat_solver.ipynb at {output_path}")
     except Exception as e:
         print(f"❌ ERROR WRITING FILE: {e}")
