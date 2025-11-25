@@ -181,6 +181,8 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 👉 **[Read the Technical Breakdown (Wiki)](https://github.com/rwiren/central-brain/wiki/MLAT-Verification)**
 <br>
 🛠️ **[Try the Network Planner Tool (Wiki)](https://github.com/rwiren/central-brain/wiki/Tools:-Network-Planner)**
+<br>
+🧮 **[TEST THE 3D SOLVER ENGINE (Live Simulation)](https://colab.research.google.com/github/rwiren/central-brain/blob/main/tools/mlat_solver.ipynb)** <-- NEW !
 
 ---
 
