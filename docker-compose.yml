@@ -16,7 +16,6 @@ services:
     restart: always
     volumes:
       - mosquitto-data:/mosquitto/data
-      # - ./mosquitto/config:/mosquitto/config # Uncomment if you add custom config
 
   # ============================================================================
   # 2. AGGREGATOR (ReadsB - Net Only)
@@ -34,12 +33,11 @@ services:
       - READSB_NET_ENABLE=true
       
       # --- SOURCE: RPi4 FEEDER ---
-      # Connects to RPi4 (192.168.1.152) on port 30005 (Beast)
+      # Connects to Node 1 (192.168.1.152) on port 30005
       - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
 
       # --- SMOOTHING & PERFORMANCE ---
       - READSB_NET_BUFFER=2
-      # Updates JSON faster for the Watchdog script
       - READSB_WRITE_JSON_EVERY=1
       
       # --- OUTPUTS ---
@@ -94,7 +92,6 @@ services:
     depends_on:
       - readsb
       - influxdb
-    # MAPPING OAUTH2 CLIENT ID/SECRET
     environment:
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
       - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
@@ -109,33 +106,41 @@ services:
     depends_on:
       - readsb
       - mqtt
-    # FIXED: Standardized environment to List format (resolves YAML error)
     environment:
-      # MAPPING OAUTH2 CLIENT ID/SECRET
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
       - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
-      
-      # Internal Connections (127.0.0.1 is correct for host network mode)
       - MQTT_BROKER=127.0.0.1
       - MQTT_PORT=1883
-      # FIXED: Uses RPi4's IP address (solves the 404 error)
       - LOCAL_READSB_URL=http://192.168.1.152:8080/data/aircraft.json 
-      
-      # Geography
       - MY_LAT=${LAT}
       - MY_LON=${LON}
 
   # ============================================================================
-  # 7. PHYSICS GUARD (Legacy Reference - Optional)
+  # 7. SYSTEM OBSERVER (Health & GPS Stats) - NEW!
   # ============================================================================
-  physics-guard:
-    build: ./physics-guard
+  system-observer:
+    build: ./system-observer
+    privileged: true  # Required to read /sys/class/thermal/thermal_zone0
     restart: always
     network_mode: host
+    depends_on:
+      - influxdb
     environment:
-      - READSB_HOST=127.0.0.1
-      - READSB_PORT=30003
       - INFLUX_HOST=127.0.0.1
       - INFLUX_DB=readsb
-      - INFLUX_USER=${INFLUX_USER}
-      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
+      - DEVICE_NAME=Central-Brain
+
+  # ============================================================================
+  # 8. PHYSICS GUARD (Legacy - Disabled to prevent double-write)
+  # ============================================================================
+  # physics-guard:
+  #   build: ./physics-guard
+  #   restart: always
+  #   network_mode: host
+  #   environment:
+  #     - READSB_HOST=127.0.0.1
+  #     - READSB_PORT=30003
+  #     - INFLUX_HOST=127.0.0.1
+  #     - INFLUX_DB=readsb
+  #     - INFLUX_USER=${INFLUX_USER}
+  #     - INFLUX_PASSWORD=${INFLUX_PASSWORD}

@@ -2,3 +2,4 @@ paho-mqtt<2.0.0
 requests
 geopy
 schedule
+influxdb
