@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_e96aa7391b8bf89935eb9f2b785f9e5f {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+    <style>
+        .panel { position: fixed; bottom: 20px; left: 20px; width: 250px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; font-family: sans-serif; z-index:9999; box-shadow: 0 5px 15px 
+rgba(0,0,0,0.1); }
+        h4 { margin: 0 0 10px 0; color: #2c3e50; }
+    </style>
+    <div class="panel">
+        <h4>📡 3D MLAT Configuration</h4>
+        <div style="font-size: 0.8em; color: #555; margin-bottom: 10px;">
+            <b>The Truth Box:</b><br>
+            4 synchronized nodes surrounding the target enable full 3D position verification.
+        </div>
+        <div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>RX1 ↔ RX2</span><b>27.44km</b></div><div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>RX2 ↔ RX3</span><b>25.08km</b></div><div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>RX3 ↔ RX4</span><b>30.37km</b></div><div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>RX4 ↔ RX1</span><b>24.02km</b></div>
+    </div>
+    
+    
+            <div class="folium-map" id="map_e96aa7391b8bf89935eb9f2b785f9e5f" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_e96aa7391b8bf89935eb9f2b785f9e5f = L.map(
+                "map_e96aa7391b8bf89935eb9f2b785f9e5f",
+                {
+                    center: [60.25, 24.95],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 10,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+            L.control.scale().addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+
+            
+
+        
+    
+            var tile_layer_b1621f5ad640d85ffa1570a392bb8661 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_b1621f5ad640d85ffa1570a392bb8661.addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var marker_c9ce5760fa832951b1c56438ae3bc203 = L.marker(
+                [60.3172, 24.9633],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var icon_80c08db6f8f59d2b6ea21af26452bf9e = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "gray",
+  "iconColor": "white",
+  "icon": "plane",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_c9ce5760fa832951b1c56438ae3bc203.bindTooltip(
+                `<div>
+                     Target: Helsinki-Vantaa (HEL)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c9ce5760fa832951b1c56438ae3bc203.setIcon(icon_80c08db6f8f59d2b6ea21af26452bf9e);
+            
+    
+            var marker_c3c1713a9ed84a5abc9b46dc21e75898 = L.marker(
+                [60.1304, 24.5106],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var icon_86db74f52f28b3f9955052a71222c057 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "white",
+  "iconColor": "#e74c3c",
+  "icon": "tower-broadcast",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_c3c1713a9ed84a5abc9b46dc21e75898.bindTooltip(
+                `<div>
+                     <b>RX1</b>: Jorvas (West)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c3c1713a9ed84a5abc9b46dc21e75898.setIcon(icon_86db74f52f28b3f9955052a71222c057);
+            
+    
+            var marker_fa093da57d21fe8e3c1cd2f8131bf6dd = L.marker(
+                [60.1304, 24.5106],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var div_icon_2561b52839356dea371706ab789c04ec = L.divIcon({
+  "html": "\u003cdiv style=\"font-size: 10pt; font-weight: bold; color: #e74c3c; text-shadow: 1px 1px 0 #fff;\"\u003eRX1\u003c/div\u003e",
+  "iconSize": [150, 36],
+  "iconAnchor": [0, 0],
+  "className": "empty",
+});
+        
+    
+                marker_fa093da57d21fe8e3c1cd2f8131bf6dd.setIcon(div_icon_2561b52839356dea371706ab789c04ec);
+            
+    
+            var marker_6ce2d50dcc77ded934958354d87835ea = L.marker(
+                [60.3196, 24.8295],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var icon_16e953ccaf49413d9b46a16bcce3e46f = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "white",
+  "iconColor": "#3498db",
+  "icon": "tower-broadcast",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_6ce2d50dcc77ded934958354d87835ea.bindTooltip(
+                `<div>
+                     <b>RX2</b>: Keimola (North)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_6ce2d50dcc77ded934958354d87835ea.setIcon(icon_16e953ccaf49413d9b46a16bcce3e46f);
+            
+    
+            var marker_aebefc7478e6f3a2fdfc746e712fdd18 = L.marker(
+                [60.3196, 24.8295],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var div_icon_43303c3ec1479e7d7f03f9ad36ff0bac = L.divIcon({
+  "html": "\u003cdiv style=\"font-size: 10pt; font-weight: bold; color: #3498db; text-shadow: 1px 1px 0 #fff;\"\u003eRX2\u003c/div\u003e",
+  "iconSize": [150, 36],
+  "iconAnchor": [0, 0],
+  "className": "empty",
+});
+        
+    
+                marker_aebefc7478e6f3a2fdfc746e712fdd18.setIcon(div_icon_43303c3ec1479e7d7f03f9ad36ff0bac);
+            
+    
+            var marker_07436cddda6895f6d2740190d24ebc39 = L.marker(
+                [60.376, 25.271],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var icon_4cd1347bbf4a07144125cfb4d7ca568a = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "white",
+  "iconColor": "#2ecc71",
+  "icon": "tower-broadcast",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_07436cddda6895f6d2740190d24ebc39.bindTooltip(
+                `<div>
+                     <b>RX3</b>: Sipoo (East)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_07436cddda6895f6d2740190d24ebc39.setIcon(icon_4cd1347bbf4a07144125cfb4d7ca568a);
+            
+    
+            var marker_86793d3ee57ebb987f6603825cfe34bb = L.marker(
+                [60.376, 25.271],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var div_icon_18596702717a28003e851ae77c5b30e4 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size: 10pt; font-weight: bold; color: #2ecc71; text-shadow: 1px 1px 0 #fff;\"\u003eRX3\u003c/div\u003e",
+  "iconSize": [150, 36],
+  "iconAnchor": [0, 0],
+  "className": "empty",
+});
+        
+    
+                marker_86793d3ee57ebb987f6603825cfe34bb.setIcon(div_icon_18596702717a28003e851ae77c5b30e4);
+            
+    
+            var marker_0197433579a67ae7de3e7f3dc014a6c5 = L.marker(
+                [60.1573, 24.9412],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var icon_2422213d97528bf79af6fc14aa232857 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "white",
+  "iconColor": "#2c3e50",
+  "icon": "tower-broadcast",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_0197433579a67ae7de3e7f3dc014a6c5.bindTooltip(
+                `<div>
+                     <b>RX4</b>: Eira (South)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_0197433579a67ae7de3e7f3dc014a6c5.setIcon(icon_2422213d97528bf79af6fc14aa232857);
+            
+    
+            var marker_23d229a14499941f6edae27696e87496 = L.marker(
+                [60.1573, 24.9412],
+                {
+}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var div_icon_e1bd49ab0698141c5ff933b9fb8cccb7 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size: 10pt; font-weight: bold; color: #2c3e50; text-shadow: 1px 1px 0 #fff;\"\u003eRX4\u003c/div\u003e",
+  "iconSize": [150, 36],
+  "iconAnchor": [0, 0],
+  "className": "empty",
+});
+        
+    
+                marker_23d229a14499941f6edae27696e87496.setIcon(div_icon_e1bd49ab0698141c5ff933b9fb8cccb7);
+            
+    
+            var poly_line_d3d7578a33c4769fedd523a6daa87457 = L.polyline(
+                [[60.1304, 24.5106], [60.3196, 24.8295]],
+                {"bubblingMouseEvents": true, "color": "#27ae60", "dashArray": "5, 5", "dashOffset": null, "fill": false, "fillColor": "#27ae60", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var poly_line_1384e18976e631b6391d1c65de85da2a = L.polyline(
+                [[60.3196, 24.8295], [60.376, 25.271]],
+                {"bubblingMouseEvents": true, "color": "#27ae60", "dashArray": "5, 5", "dashOffset": null, "fill": false, "fillColor": "#27ae60", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var poly_line_fb53045864875b220fa8690596d008cd = L.polyline(
+                [[60.376, 25.271], [60.1573, 24.9412]],
+                {"bubblingMouseEvents": true, "color": "#27ae60", "dashArray": "5, 5", "dashOffset": null, "fill": false, "fillColor": "#27ae60", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+    
+            var poly_line_61cee57631d5fe0a2198f96b0eff2b3d = L.polyline(
+                [[60.1573, 24.9412], [60.1304, 24.5106]],
+                {"bubblingMouseEvents": true, "color": "#27ae60", "dashArray": "5, 5", "dashOffset": null, "fill": false, "fillColor": "#27ae60", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_e96aa7391b8bf89935eb9f2b785f9e5f);
+        
+</script>
+</html>
