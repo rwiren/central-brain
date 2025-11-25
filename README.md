@@ -173,7 +173,7 @@ This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). 
 
 ---
 
-### 📡 MLAT / TDoA Verification (The "Lie Detector")
+## 📡 MLAT / TDoA Verification (The "Lie Detector")
 **Status:** 🚧 In Development | **Goal:** Spoofing Detection
 
 We are implementing a **Multilateration (MLAT)** engine to act as a physics-based "Truth Source" alongside OpenSky data.
