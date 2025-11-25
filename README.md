@@ -153,7 +153,7 @@ The system stores real-time flight telemetry in the `readsb` database. While the
 
 For the complete data dictionary, including **Unit Conversions** (Knots vs m/s), **Data Types**, and **Sample InfluxQL Queries**, please consult the Wiki:
 
-**👉 [View Full Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
+**👉 [View the Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
 
 ---
 
@@ -181,7 +181,7 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 * **The Solution:** By measuring the precise **Time Difference of Arrival (TDoA)** of the signal at 4+ synchronized receivers, we calculate the signal's origin purely using geometry and the speed of light.
 * **The Trap:** If `Calculated_Position` (MLAT) ≠ `Reported_Position` (ADS-B), the system flags a **Critical Security Anomaly**.
 
-👉 **[Read the Full Technical Breakdown (Wiki)](https://github.com/rwiren/central-brain/wiki/MLAT-Verification)**
+👉 **[Read the Technical Breakdown (Wiki)](https://github.com/rwiren/central-brain/wiki/MLAT-Verification)**
 
 ---
 
