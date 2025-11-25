@@ -22,6 +22,7 @@
 - [MLAT / TDoA Verification](#mlat)
 - [Receiver Coverage](#-receiver-coverage)
 - [Repository Structure](#structure)
+- [Acknowledgements & References](#acknowledgements)
 - [Deployment](#-deployment)
 
 ---
@@ -229,7 +230,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 📚 Acknowledgements & References
+## <a name="acknowledgements"></a>📚 Acknowledgements & References
 * **Base Infrastructure:** [balena-ads-b by ketilmo](https://github.com/balena-io/balena-ads-b)
 * **Data Validation:** [OpenSky Network Config](https://www.opensky-network.org/my-info/api)
 * **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
