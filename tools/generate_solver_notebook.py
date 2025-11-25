@@ -1,43 +1,26 @@
 import json
 import numpy as np 
-from typing import List, Dict, Any
-import os
 import sys
+import os 
+from typing import List, Dict, Any # Added for compatibility
 
-# --- NODE CONFIGURATION (AMSL) ---
+# --- Configuration Blocks for JSON Insertion ---
+
+# Configuration Block: Site Data (AMSL Altitudes)
 NODE_CONFIG_CODE = """
-# ==========================================
-# 1. CONFIGURATION: YOUR "CORE 4"
-# ==========================================
-# Coords: (Latitude, Longitude, Alt_AMSL_meters)
-# Altitudes are critical for the Z-axis (3D) lock stability.
-
 RECEIVERS = {
-    # Node 1: Jorvas (30m AMSL)
     "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (Rooftop)"}, 
-    
-    # Node 2: Keimola (130m AMSL - High Floor)
     "RX2": {"coords": (60.3196, 24.8295, 130.0), "name": "Keimola (11th Floor)"},
-    
-    # Node 3: Sipoo (60m AMSL - Rooftop)
     "RX3": {"coords": (60.3760, 25.2710, 60.0), "name": "Sipoo (Rooftop)"}, 
-
-    # Node 4: Eira (25m AMSL - Window)
     "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (Window)"}
 }
+C = 299792458.0
 """
 
-# --- SOLVER CODE ---
+# Solver Logic Block (The main functions)
 SOLVER_CODE = """
-import numpy as np
-from scipy.optimize import least_squares
-import math
+# --- MATH ENGINE (CONVERSION & SOLVER) ---
 
-# Speed of Light
-C = 299792458.0  
-NOMINAL_AGL_HEIGHT = 25.0
-
-# --- LLA/ECEF CONVERSION (Necessary for accurate 3D math) ---
 def lla_to_ecef(lat, lon, alt):
     a = 6378137.0; f = 1 / 298.257223563; e2 = 2*f - f**2
     lat_rad = np.radians(lat); lon_rad = np.radians(lon)
@@ -88,23 +71,20 @@ def solve_mlat(timestamps_ns):
     return None
 
 # ==========================================
-# 3. TEST SIMULATION & OUTPUT
+# 4. TEST SIMULATION & OUTPUT
 # ==========================================
 print(f"📡 Loading Core-4 Configuration: {RX_KEYS}")
 
-# 1. Simulate a plane at 30k feet over Helsinki-Vantaa Area (9144m = 30k ft)
 target_lla = (60.3172, 24.9633, 9144.0) 
 target_ecef = lla_to_ecef(*target_lla)
 print(f"✈️  SIMULATION TARGET:  {target_lla}")
 
-# 2. Generate perfect timestamps + Noise
 perfect_dists = np.linalg.norm(RX_POSITIONS - target_ecef, axis=1)
 perfect_times_ns = (perfect_dists / C) * 1e9
-noise_ns = np.random.normal(0, 15, 4) # 15ns jitter
+noise_ns = np.random.normal(0, 15, 4)
 simulated_inputs = perfect_times_ns + noise_ns
 print(f"⏱️  Simulated TDoA Jitter: +/- 15ns")
 
-# 3. Solve
 solution = solve_mlat(simulated_inputs)
 
 if solution:
@@ -130,24 +110,26 @@ else:
 notebook_content = {
  "cells": [
   {"cell_type": "markdown", 
-   # Breaking the long string into two for safety
    "source": ["# 🧮 Central Brain: MLAT Physics Engine\n", 
               "This tool verifies the stability of your Core-4 Helsinki network geometry using real AMSL altitudes. ",
               "Click the play button on the cell below to run the test!"]
   },
   {"cell_type": "code", "source": ["!pip install numpy scipy"], "execution_count": None},
-  {"cell_type": "code", "source": [NODE_CONFIG_CODE, SOLVER_CODE], "execution_count": None}
+  {"cell_type": "code", "source": [NODE_CONFIG_CODE.strip(), SOLVER_CODE.strip()], "execution_count": None}
  ],
  "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}},
  "nbformat": 4, "nbformat_minor": 4
 }
 
 # --- WRITE THE FILE ---
-# Use a robust method to ensure the file path is correct and the JSON is written fully.
 try:
-    with open("mlat_solver.ipynb", "w", encoding="utf-8") as f:
+    # Use os.path.join to ensure correct path construction
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlat_solver.ipynb")
+    
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(notebook_content, f, indent=1)
-    print("✅ Successfully created FINAL mlat_solver.ipynb. Please upload this file to your GitHub.")
+        
+    print(f"✅ Successfully created FINAL mlat_solver.ipynb at {output_path}")
 except Exception as e:
     print(f"❌ ERROR WRITING FILE: {e}")
     sys.exit(1)
