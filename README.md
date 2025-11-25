@@ -53,7 +53,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
     * Hosts InfluxDB (Time-series data) and Grafana (Visualization).
     * **OAuth2 Integration:** Implements the [OAuth2 Client Credentials Flow](https://openskynetwork.github.io/opensky-api/rest.html#oauth2-client-credentials-flow) to reliably fetch global truth data from OpenSky.
 
-* **[Complete Hardware Setup Guide](Hardware-Setup)**
+* **[Complete Hardware Guide](https://github.com/rwiren/central-brain/wiki/Hardware-Setup)**
   
 ---
 
