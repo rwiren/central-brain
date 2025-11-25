@@ -1,10 +1,15 @@
-{
+import json
+
+# This script generates a valid Jupyter Notebook (.ipynb) for your project
+# It uses short lines to prevent copy-paste errors.
+
+notebook_content = {
  "cells": [
   {
    "cell_type": "markdown",
    "metadata": {},
    "source": [
-    "# \ud83d\udce1 Central Brain: Network Planner\n",
+    "# 📡 Central Brain: Network Planner\n",
     "\n",
     "Use this tool to visualize your MLAT receiver geometry and the \"Truth Box\". \n",
     "\n",
@@ -16,7 +21,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": None,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -26,7 +31,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": None,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -48,7 +53,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": None,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -113,7 +118,7 @@
     "        dash_array=\"5, 5\"\n",
     "    ).add_to(m)\n",
     "    \n",
-    "    link_html += f\"<div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>{r1['id']} \u2194 {r2['id']}</span><b>{dist}km</b></div>\"\n",
+    "    link_html += f\"<div style='display:flex; justify-content:space-between; font-size:0.8em; border-bottom:1px solid #eee;'><span>{r1['id']} ↔ {r2['id']}</span><b>{dist}km</b></div>\"\n",
     "\n",
     "# Dashboard\n",
     "custom_html = f\"\"\"\n",
@@ -134,7 +139,7 @@
     "    h4 {{ margin: 0 0 10px 0; color: #2c3e50; }}\n",
     "</style>\n",
     "<div class=\"panel\">\n",
-    "    <h4>\ud83d\udce1 3D MLAT Configuration</h4>\n",
+    "    <h4>📡 3D MLAT Configuration</h4>\n",
     "    <div style=\"font-size: 0.8em; color: #555; margin-bottom: 10px;\">\n",
     "        <b>The Truth Box:</b><br>\n",
     "        4 synchronized nodes surrounding the target enable full 3D position verification.\n",
@@ -171,3 +176,8 @@
  "nbformat": 4,
  "nbformat_minor": 4
 }
+
+with open("mlat_planner.ipynb", "w", encoding="utf-8") as f:
+    json.dump(notebook_content, f, indent=1)
+
+print("✅ Successfully created mlat_planner.ipynb! Upload this specific file to GitHub.")
