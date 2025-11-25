@@ -1,37 +1,35 @@
 import json
 import numpy as np 
-from scipy.optimize import least_squares # Imported only for structural integrity
+from scipy.optimize import least_squares
 import sys
 import os 
 from typing import List, Dict, Any 
-import math # Needed for some math functions in the script logic
+import math 
 
 # ==============================================================================
-# 1. FINAL CONFIGURATION DATA (EMBEDDED)
+# 1. DATA BLOCKS (Variables must be outside the function for clean JSON structure)
 # ==============================================================================
-# This data block is precisely what is written into the JSON output file.
-# Note: The logic for lla_to_ecef and solve_mlat is needed in the same cell.
 
-FINAL_NOTEBOOK_CODE_BLOCK = """
-import numpy as np
-from scipy.optimize import least_squares
-import math
-
-# ==========================================
-# 1. CONFIGURATION: YOUR "CORE 4" (AMSL)
-# ==========================================
-C = 299792458.0  # Speed of light in m/s
-
+# Configuration Block (Site Data - AMSL Altitudes)
+NODE_CONFIG_CODE = """
 RECEIVERS = {
     "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (Rooftop)"}, 
     "RX2": {"coords": (60.3196, 24.8295, 130.0), "name": "Keimola (11th Floor)"},
     "RX3": {"coords": (60.3760, 25.2710, 60.0), "name": "Sipoo (Rooftop)"}, 
     "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (Window)"}
 }
+"""
 
-# ==========================================
-# 2. MATH ENGINE
-# ==========================================
+# Solver Logic Block
+SOLVER_CODE = """
+import numpy as np
+from scipy.optimize import least_squares
+import math
+
+# Speed of Light
+C = 299792458.0  
+
+# --- MATH ENGINE (CONVERSION & SOLVER) ---
 def lla_to_ecef(lat, lon, alt):
     a = 6378137.0; f = 1 / 298.257223563; e2 = 2*f - f**2
     lat_rad = np.radians(lat); lon_rad = np.radians(lon)
@@ -82,7 +80,7 @@ def solve_mlat(timestamps_ns):
     return None
 
 # ==========================================
-# 3. TEST SIMULATION & OUTPUT (This runs in Colab)
+# 3. TEST SIMULATION & OUTPUT
 # ==========================================
 print(f"📡 Loading Core-4 Configuration: {RX_KEYS}")
 
@@ -103,24 +101,23 @@ if solution:
     diff_h = np.linalg.norm(np.array(target_lla[:2]) - np.array([calc_lat, calc_lon])) * 111000
     diff_v = abs(calc_alt - target_lla[2])
     
-    print("\\n=== SOLVER DIAGNOSTICS ===")
+    print("\n=== SOLVER DIAGNOSTICS ===")
     print(f"🎯 POSITION (LLA):     ({calc_lat:.4f}, {calc_lon:.4f}, {calc_alt:.1f}m)")
     print(f"📉 RELIABILITY (Cost): {cost:.2e}  <-- Close to zero means perfect intersection.")
     print(f"📏 HORIZ. ERROR:       {diff_h:.1f}m    <-- Positional accuracy on the map.")
     print(f"📏 VERTICAL ERROR:     {diff_v:.1f}m    <-- Altitude accuracy (Z-axis stability).")
 
     if diff_h < 50 and diff_v < 100:
-         print("\\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
+         print("\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
     else:
-         print("\\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
+         print("\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
 else:
     print("❌ SOLVER FAILED to converge.")
 """
 
 # ==============================================================================
-# 2. FINAL JSON GENERATION
+# 3. JSON GENERATION AND FILE WRITE
 # ==============================================================================
-
 def generate_final_notebook():
     notebook_content = {
      "cells": [
@@ -131,7 +128,7 @@ def generate_final_notebook():
       },
       {"cell_type": "code", "source": ["!pip install numpy scipy"], "execution_count": None},
       # The main execution cell combining configuration and solver logic
-      {"cell_type": "code", "source": [FINAL_NOTEBOOK_CODE_BLOCK.strip().replace('"', '\\"'), "\n", SOLVER_CODE.strip().replace('"', '\\"')], "execution_count": None}
+      {"cell_type": "code", "source": [NODE_CONFIG_CODE.strip(), "\n", SOLVER_CODE.strip()], "execution_count": None}
      ],
      "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}},
      "nbformat": 4, "nbformat_minor": 4
