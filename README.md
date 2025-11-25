@@ -160,13 +160,17 @@ For the complete data dictionary, including **Unit Conversions** (Knots vs m/s),
 
 ---
 
-## 📊 Grafana Dashboards
-*Visualization of real-time flight telemetry, spoofing alerts, and system health.*
+### <a name="-grafana-dashboards"></a>📊 Grafana Dashboards
 
-🚧 **Documentation Pending:** This section will detail the specific dashboards used to visualize the `readsb` database, including:
-* **Spoofing Alert Heatmap:** Visualizing `is_spoofed` events geographically.
-* **Signal Integrity:** Correlating `signal_db` with distance to detect anomalies.
-* **Drift Analysis:** Plotting `lat_error` and `lon_error` over time.
+Visualization of real-time flight telemetry, spoofing alerts, and system health.
+
+* **[Command Center Configuration](https://github.com/rwiren/central-brain/wiki/Grafana-Dashboards)**: Detailed documentation of the InfluxQL queries, panel settings, and visual logic used in the dashboard.
+
+### Core Views
+* **Live Tactical Map:** Visualizes aircraft positions, headings, and altitude heatmaps using a dark-mode geospatial overlay.
+* **Signal Integrity:** Monitors the "Pulse" of the system by tracking message rate volume (`messages/sec`) versus active target quality.
+* **Spoofing Alert Heatmap:** *(In Progress)* Visualizing `is_spoofed` events geographically to identify denial-of-service zones.
+* **Drift Analysis:** *(In Progress)* Plotting the delta between `local_aircraft_state` and `global_truth` (OpenSky) over time.
 
 ---
 ### <a name="mlat"></a>📡 MLAT / TDoA Verification (The "Lie Detector")
