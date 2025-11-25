@@ -205,19 +205,25 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ```text
 .
-├── DATA_DICTIONARY.md     # Deprecated, content merged into README.md
+├── DATA_DICTIONARY.md         # Deprecated (See Wiki for active schema)
 ├── LICENSE
-├── README.md
-├── adsb-feeders/          # NEW: Handles data ingestion to InfluxDB (Local & OpenSky)
-│   ├── Dockerfile
-│   ├── opensky_feeder.py
-│   ├── readsb_feeder.py
-│   └── readsb_position_feeder.py
-├── assets/
-├── docker-compose.yml
-├── physics-guard/         # Original Logic (now integrated into spoof-detector)
-├── runway-tracker/        # Original Logic (now integrated into spoof-detector)
-└── spoof-detector/        # Watchdog 2.0 (Main Analyzer)
+├── README.md                  # Project documentation & quick start
+├── docker-compose.yml         # Main orchestration stack
+├── adsb-feeders/              # Ingestion Pipelines (Local & OpenSky -> InfluxDB)
+│   ├── Dockerfile
+│   ├── opensky_feeder.py
+│   ├── readsb_feeder.py
+│   └── readsb_position_feeder.py
+├── spoof-detector/            # CORE: Watchdog 2.0 (Main Security Analyzer)
+│   ├── Dockerfile
+│   └── watchdog.py
+├── tools/                     # 🛠️ Utilities & Planning
+│   ├── mlat_planner.ipynb     # Interactive Colab Notebook (for Wiki)
+│   ├── mlat_planner.py        # Local Python script for visualization
+│   └── generate_notebook.py   # Helper to build the notebook
+├── assets/                    # Documentation images & MLAT diagrams
+├── physics-guard/             # [Legacy] Original logic (integrated into spoof-detector)
+└── runway-tracker/            # [Legacy] Original logic (integrated into spoof-detector)
 ```
 
 ---
