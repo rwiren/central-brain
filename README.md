@@ -37,10 +37,11 @@
 ## 🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
-### 📡 Node 1: The Sensor (RPi 4)
-* **Role:** Dedicated Signal Capture and JSON Server.
+### 📡 Node 1: The Sensor (and "The Anchor") (RPi 4)
+* **Location:** HEL-ARN Corridor (Focus: EFHK)
+* **Role:** Dedicated Signal Capture and JSON Server. Primary sync node for the MLAT "Truth Box."
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
-* **Placement:** **High Floor window** clear Line of Sight (LoS) facing Helsinki-Vantaa (EFHK).
+* **Placement:** High Floor window with clear Line of Sight (LoS) facing Helsinki-Vantaa.
 * **Function:** Decodes raw 1090MHz RF signals into Beast binary format and serves the processed data via HTTP.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
