@@ -40,7 +40,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 ### 📡 Node 1: The Sensor (RPi 4)
 * **Role:** Dedicated Signal Capture and JSON Server.
 * **Hardware:** Raspberry Pi 4 + [RTL-SDR V3 Dongle](https://www.rtl-sdr.com/about-rtl-sdr/) + 1090MHz Antenna.
-* **Placement:** **11th Floor** window clear Line of Sight (LoS) facing Helsinki-Vantaa (EFHK).
+* **Placement:** **High Floor window** clear Line of Sight (LoS) facing Helsinki-Vantaa (EFHK).
 * **Function:** Decodes raw 1090MHz RF signals into Beast binary format and serves the processed data via HTTP.
 
 ### 🧠 Node 2: The Central Brain (RPi 5)
