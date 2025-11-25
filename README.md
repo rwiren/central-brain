@@ -151,15 +151,9 @@ The system stores real-time flight telemetry in the `readsb` database. While the
 
 📚 **Full Documentation on Wiki**
 
-For the complete data dictionary, including **Unit Conversions** (Knots vs m/s), **Data Types**, and **Sample InfluxQL Queries**, please consult the Wiki:
+For the complete data dictionary, including **Unit Conversions** (Knots vs m/s), **Data Types**, and **Sample InfluxQL Queries**, check the Wiki:
 
 **👉 [View the Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
-
----
-
-### ⚠️ Legacy Note
-**Measurement: `aircraft`**
-This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). For analysis and dashboards, it is recommended to use `local_aircraft_state` as field names are normalized and consistent.
 
 ---
 
