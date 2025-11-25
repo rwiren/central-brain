@@ -221,6 +221,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 │   ├── Dockerfile
 │   └── watchdog.py
 ├── tools/                     # 🛠️ Utilities & Planning
+│   ├── mlat_solver.py         # 🧮 Core-4 Math Engine (Physics Solver)
 │   ├── mlat_planner.ipynb     # Interactive Colab Notebook (for Wiki)
 │   ├── mlat_planner.py        # Local Python script for visualization
 │   └── generate_notebook.py   # Helper to build the notebook
