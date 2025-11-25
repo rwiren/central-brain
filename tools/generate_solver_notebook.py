@@ -3,37 +3,24 @@ import uuid
 import os
 import sys
 
-# --- DATA BLOCKS ---
+# --- CONFIGURATION DATA ---
 NODE_CONFIG_CODE = """
 # ==========================================
-# 1. CONFIGURATION: YOUR "CORE 4"
+# 1. CONFIGURATION: YOUR "CORE 4" (AMSL)
 # ==========================================
-# Coords: (Latitude, Longitude, Alt_AMSL_meters)
-# Altitudes are critical for the Z-axis (3D) lock stability.
-
 RECEIVERS = {
-    # Node 1: Jorvas (30m AMSL)
     "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (Rooftop)"}, 
-    
-    # Node 2: Keimola (130m AMSL - High Floor)
     "RX2": {"coords": (60.3196, 24.8295, 130.0), "name": "Keimola (11th Floor)"},
-    
-    # Node 3: Sipoo (60m AMSL - Rooftop)
     "RX3": {"coords": (60.3760, 25.2710, 60.0), "name": "Sipoo (Rooftop)"}, 
-
-    # Node 4: Eira (25m AMSL - Window)
     "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (Window)"}
 }
+C = 299792458.0
 """
 
 SOLVER_CODE = """
 import numpy as np
 from scipy.optimize import least_squares
 import math
-
-# Speed of Light
-C = 299792458.0  
-NOMINAL_AGL_HEIGHT = 25.0
 
 # --- MATH ENGINE ---
 def lla_to_ecef(lat, lon, alt):
@@ -85,9 +72,7 @@ def solve_mlat(timestamps_ns):
         return lat, lon, alt, result.cost
     return None
 
-# ==========================================
-# 3. TEST SIMULATION & OUTPUT
-# ==========================================
+# --- TEST SIMULATION ---
 print(f"📡 Loading Core-4 Configuration: {RX_KEYS}")
 
 target_lla = (60.3172, 24.9633, 9144.0) 
@@ -109,22 +94,25 @@ if solution:
     
     print("\\n=== SOLVER DIAGNOSTICS ===")
     print(f"🎯 POSITION (LLA):     ({calc_lat:.4f}, {calc_lon:.4f}, {calc_alt:.1f}m)")
-    print(f"📉 RELIABILITY (Cost): {cost:.2e}  <-- Close to zero means perfect intersection.")
-    print(f"📏 HORIZ. ERROR:       {diff_h:.1f}m    <-- Positional accuracy on the map.")
-    print(f"📏 VERTICAL ERROR:     {diff_v:.1f}m    <-- Altitude accuracy (Z-axis stability).")
+    print(f"📉 RELIABILITY (Cost): {cost:.2e}")
+    print(f"📏 HORIZ. ERROR:       {diff_h:.1f}m")
+    print(f"📏 VERTICAL ERROR:     {diff_v:.1f}m")
 
     if diff_h < 50 and diff_v < 100:
          print("\\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
     else:
-         print("\\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
+         print("\\n🔴 STATUS: MISMATCH / SPOOFING")
 else:
     print("❌ SOLVER FAILED to converge.")
 """
 
-# ==============================================================================
-# 4. JSON GENERATION (WITH IDS)
-# ==============================================================================
+# ==========================================
+# 4. GENERATE NOTEBOOK WITH NEW NAME
+# ==========================================
 def generate_final_notebook():
+    # NEW FILENAME to break the cache
+    NEW_FILENAME = "mlat_physics_engine.ipynb"
+    
     notebook_content = {
      "cells": [
       {
@@ -133,7 +121,7 @@ def generate_final_notebook():
           "source": ["# 🧮 Central Brain: MLAT Physics Engine\n", 
                      "This tool verifies the stability of your Core-4 Helsinki network geometry using real AMSL altitudes. ",
                      "Click the play button on the cell below to run the test!"],
-          "id": str(uuid.uuid4()) # <--- CRITICAL: Unique ID required by Colab
+          "id": str(uuid.uuid4()) # ID Required by Colab
       },
       {
           "cell_type": "code", 
@@ -141,7 +129,7 @@ def generate_final_notebook():
           "source": ["!pip install numpy scipy"], 
           "execution_count": None,
           "outputs": [],
-          "id": str(uuid.uuid4()) # <--- CRITICAL
+          "id": str(uuid.uuid4()) 
       },
       {
           "cell_type": "code", 
@@ -149,7 +137,7 @@ def generate_final_notebook():
           "source": [NODE_CONFIG_CODE.strip(), "\n", SOLVER_CODE.strip()], 
           "execution_count": None,
           "outputs": [],
-          "id": str(uuid.uuid4()) # <--- CRITICAL
+          "id": str(uuid.uuid4()) 
       }
      ],
      "metadata": {
@@ -158,17 +146,20 @@ def generate_final_notebook():
 "version": "3.8.5"}
      },
      "nbformat": 4,
-     "nbformat_minor": 5 # Bumped to 4.5 to support IDs
+     "nbformat_minor": 5
     }
 
-    # --- WRITE THE FILE ---
     try:
-        output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlat_solver.ipynb")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, NEW_FILENAME)
+        
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(notebook_content, f, indent=1)
-        print(f"✅ Successfully created FINAL mlat_solver.ipynb at {output_path}")
+            
+        print(f"✅ Successfully created NEW file: {NEW_FILENAME}")
+        print("👉 Please upload this NEW file to GitHub and update your Wiki link.")
     except Exception as e:
-        print(f"❌ ERROR WRITING FILE: {e}")
+        print(f"❌ ERROR: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
