@@ -178,7 +178,7 @@ This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). 
 
 We are implementing a **Multilateration (MLAT)** engine to act as a physics-based "Truth Source" alongside OpenSky data.
 
-* **The Problem:** GPS Spoofing allows an actor to broadcast fake coordinates (e.g., "I am at 30,000ft" when they are actually on the ground).
+* **The Problem:** GPS Spoofing allows an actor to broadcast fake coordinates—for example, claiming to be an airliner on final approach to **Helsinki-Vantaa (HEL)**, when they are actually transmitting from a vehicle parked on the ground nearby.
 * **The Solution:** By measuring the precise **Time Difference of Arrival (TDoA)** of the signal at 4+ synchronized receivers, we calculate the signal's origin purely using geometry and the speed of light.
 * **The Trap:** If `Calculated_Position` (MLAT) ≠ `Reported_Position` (ADS-B), the system flags a **Critical Security Anomaly**.
 
