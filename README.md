@@ -19,7 +19,7 @@
 - [Security Modules](#-security-modules-watchdog-20)
 - [Data Schema (InfluxDB)](#-data-schema-influxdb)
 - [Grafana Dashboards](#-grafana-dashboards)
-- [MLAT / TDoA Verification](#-mlat--tdoa-verification)
+- [📡 MLAT / TDoA Verification](#mlat)
 - [Receiver Coverage](#-receiver-coverage)
 - [Deployment](#-deployment)
 
@@ -172,8 +172,7 @@ This measurement contains raw field dumps (e.g., `Trak`, `Spd`, `Sig`, `GAlt`). 
 * **Drift Analysis:** Plotting `lat_error` and `lon_error` over time.
 
 ---
-
-## 📡 MLAT / TDoA Verification (The "Lie Detector")
+### <a name="mlat"></a>📡 MLAT / TDoA Verification (The "Lie Detector")
 **Status:** 🚧 In Development | **Goal:** Spoofing Detection
 
 We are implementing a **Multilateration (MLAT)** engine to act as a physics-based "Truth Source" alongside OpenSky data.
