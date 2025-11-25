@@ -1,9 +1,10 @@
 import json
 import numpy as np 
 from typing import List, Dict, Any
+import os
+import sys
 
 # --- NODE CONFIGURATION (AMSL) ---
-# NOTE: This configuration is embedded directly into the Colab notebook's source code.
 NODE_CONFIG_CODE = """
 # ==========================================
 # 1. CONFIGURATION: YOUR "CORE 4"
@@ -142,7 +143,11 @@ notebook_content = {
 }
 
 # --- WRITE THE FILE ---
-with open("mlat_solver.ipynb", "w", encoding="utf-8") as f:
-    json.dump(notebook_content, f, indent=1)
-
-print("✅ Successfully created FINAL mlat_solver.ipynb. Please upload this file to your GitHub.")
+# Use a robust method to ensure the file path is correct and the JSON is written fully.
+try:
+    with open("mlat_solver.ipynb", "w", encoding="utf-8") as f:
+        json.dump(notebook_content, f, indent=1)
+    print("✅ Successfully created FINAL mlat_solver.ipynb. Please upload this file to your GitHub.")
+except Exception as e:
+    print(f"❌ ERROR WRITING FILE: {e}")
+    sys.exit(1)
