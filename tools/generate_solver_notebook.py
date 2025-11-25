@@ -1,29 +1,42 @@
 import json
+import numpy as np 
+from typing import List, Dict, Any
 
-# This script generates 'mlat_solver.ipynb' for your Wiki.
-# It packages your physics engine into a format Google Colab can run.
+# --- NODE CONFIGURATION (AMSL) ---
+# NOTE: This configuration is embedded directly into the Colab notebook's source code.
+NODE_CONFIG_CODE = """
+# ==========================================
+# 1. CONFIGURATION: YOUR "CORE 4"
+# ==========================================
+# Coords: (Latitude, Longitude, Alt_AMSL_meters)
+# Altitudes are critical for the Z-axis (3D) lock stability.
 
-solver_code = r"""
+RECEIVERS = {
+    # Node 1: Jorvas (30m AMSL)
+    "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (Rooftop)"}, 
+    
+    # Node 2: Keimola (130m AMSL - High Floor)
+    "RX2": {"coords": (60.3196, 24.8295, 130.0), "name": "Keimola (11th Floor)"},
+    
+    # Node 3: Sipoo (60m AMSL - Rooftop)
+    "RX3": {"coords": (60.3760, 25.2710, 60.0), "name": "Sipoo (Rooftop)"}, 
+
+    # Node 4: Eira (25m AMSL - Window)
+    "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (Window)"}
+}
+"""
+
+# --- SOLVER CODE ---
+SOLVER_CODE = """
 import numpy as np
 from scipy.optimize import least_squares
 import math
 
-# ==========================================
-# 1. CONFIGURATION: YOUR "CORE 4"
-# ==========================================
-# Coordinates: (Latitude, Longitude, Altitude_meters)
-RECEIVERS = {
-    "RX1": {"coords": (60.1304, 24.5106, 30.0), "name": "Jorvas (West)"},
-    "RX2": {"coords": (60.3196, 24.8295, 50.0), "name": "Keimola (North)"},
-    "RX3": {"coords": (60.3760, 25.2710, 40.0), "name": "Sipoo (East)"},
-    "RX4": {"coords": (60.1573, 24.9412, 25.0), "name": "Eira (South)"}
-}
+# Speed of Light
+C = 299792458.0  
+NOMINAL_AGL_HEIGHT = 25.0
 
-C = 299792458.0  # Speed of light (m/s)
-
-# ==========================================
-# 2. MATH ENGINE (The Physics)
-# ==========================================
+# --- LLA/ECEF CONVERSION (Necessary for accurate 3D math) ---
 def lla_to_ecef(lat, lon, alt):
     a = 6378137.0; f = 1 / 298.257223563; e2 = 2*f - f**2
     lat_rad = np.radians(lat); lon_rad = np.radians(lon)
@@ -35,8 +48,7 @@ def lla_to_ecef(lat, lon, alt):
 
 def ecef_to_lla(x, y, z):
     a = 6378137.0; f = 1 / 298.257223563; e2 = 2*f - f**2
-    r = np.sqrt(x**2 + y**2)
-    lat = np.arctan2(z, r)
+    r = np.sqrt(x**2 + y**2); lat = np.arctan2(z, r)
     for _ in range(5): 
         sin_lat = np.sin(lat)
         N = a / np.sqrt(1 - e2 * sin_lat**2)
@@ -45,7 +57,7 @@ def ecef_to_lla(x, y, z):
     lon = np.arctan2(y, x)
     return np.degrees(lat), np.degrees(lon), alt
 
-# Cache Positions
+# Cache Receiver Positions in ECEF
 RX_KEYS = list(RECEIVERS.keys())
 RX_POSITIONS = np.array([lla_to_ecef(*RECEIVERS[k]["coords"]) for k in RX_KEYS])
 CENTER_LAT = np.mean([RECEIVERS[k]["coords"][0] for k in RX_KEYS])
@@ -54,91 +66,83 @@ CENTER_LON = np.mean([RECEIVERS[k]["coords"][1] for k in RX_KEYS])
 def tdoa_error_func(estimated_pos, rx_positions, arrival_times):
     distances = np.linalg.norm(rx_positions - estimated_pos, axis=1)
     calc_travel_times = distances / C
-    return (calc_travel_times[1:] - calc_travel_times[0]) - (arrival_times[1:] - arrival_times[0])
+    observed_diffs = arrival_times[1:] - arrival_times[0]
+    calc_diffs = calc_travel_times[1:] - calc_travel_times[0]
+    return calc_diffs - observed_diffs
 
-def solve_position(timestamps_ns):
+def solve_mlat(timestamps_ns):
     t_sec = np.array(timestamps_ns) / 1e9
-    # Smart Guess: Start at 10,000m to avoid "Underground" mirror solution
-    initial_guess_ecef = lla_to_ecef(CENTER_LAT, CENTER_LON, 10000.0) 
-    result = least_squares(tdoa_error_func, initial_guess_ecef, args=(RX_POSITIONS, t_sec), method='lm')
+    initial_guess_lla = (CENTER_LAT, CENTER_LON, 10000.0) 
+    initial_guess_ecef = lla_to_ecef(*initial_guess_lla)
+    
+    result = least_squares(
+        tdoa_error_func, 
+        initial_guess_ecef, 
+        args=(RX_POSITIONS, t_sec),
+        method='lm'
+    )
     if result.success:
-        return (*ecef_to_lla(*result.x), result.cost)
+        lat, lon, alt = ecef_to_lla(*result.x)
+        return lat, lon, alt, result.cost
     return None
 
 # ==========================================
-# 3. RUN SIMULATION
+# 3. TEST SIMULATION & OUTPUT
 # ==========================================
-print(f"📡 Core-4 Solver Configured: {RX_KEYS}")
+print(f"📡 Loading Core-4 Configuration: {RX_KEYS}")
 
-# Simulate a plane at 30k feet over Vantaa
-target_lla = (60.3000, 24.9500, 9144.0)
+# 1. Simulate a plane at 30k feet over Helsinki-Vantaa Area (9144m = 30k ft)
+target_lla = (60.3172, 24.9633, 9144.0) 
 target_ecef = lla_to_ecef(*target_lla)
+print(f"✈️  SIMULATION TARGET:  {target_lla}")
 
-# Physics + Noise
-perfect_times_ns = (np.linalg.norm(RX_POSITIONS - target_ecef, axis=1) / C) * 1e9
-noise_ns = np.random.normal(0, 15, 4) # 15ns hardware jitter
-inputs = perfect_times_ns + noise_ns
+# 2. Generate perfect timestamps + Noise
+perfect_dists = np.linalg.norm(RX_POSITIONS - target_ecef, axis=1)
+perfect_times_ns = (perfect_dists / C) * 1e9
+noise_ns = np.random.normal(0, 15, 4) # 15ns jitter
+simulated_inputs = perfect_times_ns + noise_ns
+print(f"⏱️  Simulated TDoA Jitter: +/- 15ns")
 
-print(f"✈️  Target: {target_lla}")
-print(f"⏱️  Inputs: {inputs.astype(int)}")
-
-solution = solve_position(inputs)
+# 3. Solve
+solution = solve_mlat(simulated_inputs)
 
 if solution:
-    lat, lon, alt, cost = solution
-    status = "✅ 3D LOCK" if (abs(alt - 9144) < 150) else "🔴 SPOOFING ALERT"
-    print("-" * 40)
-    print(f"🎯 RESULT: ({lat:.4f}, {lon:.4f}, {alt:.1f}m)")
-    print(f"📊 STATUS: {status}")
+    calc_lat, calc_lon, calc_alt, cost = solution
+    diff_h = np.linalg.norm(np.array(target_lla[:2]) - np.array([calc_lat, calc_lon])) * 111000
+    diff_v = abs(calc_alt - target_lla[2])
+    
+    print("\n=== SOLVER DIAGNOSTICS ===")
+    print(f"🎯 POSITION (LLA):     ({calc_lat:.4f}, {calc_lon:.4f}, {calc_alt:.1f}m)")
+    print(f"📉 RELIABILITY (Cost): {cost:.2e}  <-- Close to zero means perfect intersection.")
+    print(f"📏 HORIZ. ERROR:       {diff_h:.1f}m    <-- Positional accuracy on the map.")
+    print(f"📏 VERTICAL ERROR:     {diff_v:.1f}m    <-- Altitude accuracy (Z-axis stability).")
+
+    if diff_h < 50 and diff_v < 100:
+         print("\n🟢 STATUS: 3D LOCK CONFIRMED (READY FOR LIVE DATA)")
+    else:
+         print("\n🔴 STATUS: MISMATCH / SPOOFING (Check Geometry or Timing)")
 else:
-    print("❌ Failed to solve.")
+    print("❌ SOLVER FAILED to converge.")
 """
 
+# --- JSON STRUCTURE GENERATION ---
 notebook_content = {
  "cells": [
-  {
-   "cell_type": "markdown",
-   "metadata": {},
-   "source": [
-    "# 🧮 Central Brain: MLAT Physics Engine\n",
-    "\n",
-    "This tool simulates the mathematical core of the project. It uses the **Levenberg-Marquardt** algorithm to solve the intersection of 4 hyperboloids in 3D space.\n",
-    "\n",
-    "### Instructions\n",
-    "1. Run the **Setup** cell to install Scipy/Numpy.\n",
-    "2. Run the **Solver** cell to simulate a plane and see if the math can find it."
-   ]
+  {"cell_type": "markdown", 
+   # Breaking the long string into two for safety
+   "source": ["# 🧮 Central Brain: MLAT Physics Engine\n", 
+              "This tool verifies the stability of your Core-4 Helsinki network geometry using real AMSL altitudes. ",
+              "Click the play button on the cell below to run the test!"]
   },
-  {
-   "cell_type": "code",
-   "execution_count": None,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# [SETUP] Install Math Libraries\n",
-    "!pip install numpy scipy"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": None,
-   "metadata": {},
-   "outputs": [],
-   "source": solver_code.splitlines(True) # Split correctly for JSON
-  }
+  {"cell_type": "code", "source": ["!pip install numpy scipy"], "execution_count": None},
+  {"cell_type": "code", "source": [NODE_CONFIG_CODE, SOLVER_CODE], "execution_count": None}
  ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "python3"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 4
+ "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"}},
+ "nbformat": 4, "nbformat_minor": 4
 }
 
+# --- WRITE THE FILE ---
 with open("mlat_solver.ipynb", "w", encoding="utf-8") as f:
     json.dump(notebook_content, f, indent=1)
 
-print("✅ Created mlat_solver.ipynb")
+print("✅ Successfully created FINAL mlat_solver.ipynb. Please upload this file to your GitHub.")
