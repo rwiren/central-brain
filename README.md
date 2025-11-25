@@ -21,6 +21,7 @@
 - [Grafana Dashboards](#-grafana-dashboards)
 - [MLAT / TDoA Verification](#mlat)
 - [Receiver Coverage](#-receiver-coverage)
+- [Repository Structure](#structure)
 - [Deployment](#-deployment)
 
 ---
@@ -201,7 +202,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 📂 Repository Structure
+## <a name="structure"></a>📂 Repository Structure
 
 ```text
 .
