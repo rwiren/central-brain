@@ -19,7 +19,7 @@
 - [Security Modules](#-security-modules-watchdog-20)
 - [Data Schema (InfluxDB)](#-data-schema-influxdb)
 - [Grafana Dashboards](#-grafana-dashboards)
-- [📡 MLAT / TDoA Verification](#mlat)
+- [MLAT / TDoA Verification](#mlat)
 - [Receiver Coverage](#-receiver-coverage)
 - [Deployment](#-deployment)
 
