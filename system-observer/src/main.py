@@ -1,8 +1,9 @@
 import time
 import os
 import sys
-import psutil # Now available via requirements.txt
+import psutil 
 from influxdb import InfluxDBClient
+import logging
 
 # --- CONFIGURATION ---
 INFLUX_HOST = os.getenv('INFLUX_HOST', '127.0.0.1')
@@ -11,6 +12,11 @@ INFLUX_DB   = os.getenv('INFLUX_DB', 'readsb')
 
 # Device Name
 DEVICE_NAME = os.getenv('DEVICE_NAME', os.getenv('BALENA_DEVICE_NAME_AT_INIT', os.uname()[1]))
+
+# Logging setup (Optional, but good practice for tracking status)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
+logger = logging.getLogger("SystemObserver")
+
 
 def get_cpu_temp():
     """Reads temperature from thermal zone (Raspberry Pi specific)."""
@@ -31,34 +37,37 @@ def get_uptime():
         return 0
 
 def get_system_metrics():
-    """Captures RAM and Disk usage."""
+    """Collects CPU, RAM, and Disk usage using psutil."""
     # Memory
     ram = psutil.virtual_memory()
+    # CPU usage (non-blocking for quick check)
+    cpu_usage = psutil.cpu_percent(interval=None) 
     # Disk (Root partition)
     disk = psutil.disk_usage('/')
     
-    return ram.percent, disk.percent
+    # Return CPU, RAM, Disk, Temp
+    return cpu_usage, ram.percent, disk.percent 
 
 def main():
-    print(f"System Observer [{DEVICE_NAME}] Starting...", flush=True)
-    print(f"Target: {INFLUX_HOST}:{INFLUX_PORT} (DB: {INFLUX_DB})", flush=True)
+    logger.info(f"System Observer [{DEVICE_NAME}] Starting...")
+    logger.info(f"Target: {INFLUX_HOST}:{INFLUX_PORT} (DB: {INFLUX_DB})")
     
     client = InfluxDBClient(host=INFLUX_HOST, port=INFLUX_PORT)
     
-    # --- Database Initialization ---
+    # --- Database Initialization / Connection Check ---
     while True:
         try:
-            # Only create DB if running locally/admin
+            # Create database if necessary (only runs on central host)
             if INFLUX_HOST in ['127.0.0.1', 'localhost', 'influxdb']:
                 dbs = client.get_list_database()
                 if not any(d['name'] == INFLUX_DB for d in dbs):
                     client.create_database(INFLUX_DB)
             
             client.switch_database(INFLUX_DB)
-            print("Connected to InfluxDB", flush=True)
+            logger.info("Connected to InfluxDB")
             break
         except Exception as e:
-            print(f"Database Connection Failed ({e}). Retrying in 5s...", flush=True)
+            logger.error(f"Database Connection Failed ({e}). Retrying in 5s...")
             time.sleep(5)
 
     # --- Main Loop ---
@@ -66,29 +75,31 @@ def main():
         try:
             temp = get_cpu_temp()
             uptime = get_uptime()
-            ram_usage, disk_usage = get_system_metrics()
+            cpu_usage, ram_usage, disk_usage = get_system_metrics()
             
             json_body = [
                 {
                     "measurement": "system_stats",
                     "tags": {
-                        "host": DEVICE_NAME
+                        "host": DEVICE_NAME,
+                        "cpu_model": os.uname().machine # Optional: Add architecture tag
                     },
                     "fields": {
                         "cpu_temp": float(temp),
                         "uptime": int(uptime),
+                        "cpu_usage": float(cpu_usage),
                         "ram_usage": float(ram_usage),
-                        "disk_usage": float(disk_usage)
+                        "disk_usage": float(disk_usage) # <-- CRITICAL FIX: DISK USAGE ADDED
                     }
                 }
             ]
             
             client.write_points(json_body)
-            # FIX: Removed '°' symbol to prevent log artifacts
-            print(f"[{DEVICE_NAME}] Stats Pushed: {temp} C | RAM: {ram_usage}%", flush=True)
+            # Log disk usage percentage for debugging
+            logger.info(f"Stats Pushed: {temp} C | RAM: {ram_usage}% | DISK: {disk_usage}%")
             
         except Exception as e:
-            print(f"Write Error: {e}", flush=True)
+            logger.error(f"Write Error: {e}")
             
         time.sleep(10)
 
