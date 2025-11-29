@@ -1,31 +1,37 @@
 version: '2.1'
 
-# Persistent volume for sharing ADS-B state between containers if needed
 volumes:
   readsb-data:
 
 services:
   # ==============================================================================
-  # 1. HARDWARE ABSTRACTION LAYER (The "Drivers")
+  # 1. HARDWARE ABSTRACTION LAYER
   # ==============================================================================
   
-  # --- GPS HARDWARE HANDLER ---
-  # Connects to the physical U-Blox USB stick.
-  # Serves NMEA data over TCP port 2000 so multiple containers can read it.
+  # [GPS HARDWARE] Connects to USB Stick -> Outputs TCP 2000
   splitter:
     build: ./splitter
     privileged: true
     network_mode: host
     restart: always
     environment:
-      # CRITICAL: This path must match your physical USB device
-      - SERIAL_PORT=/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00
+      - SERIAL_PORT=/dev/ttyACM0
       - BAUD_RATE=9600
       - TCP_PORT=2000
 
-  # --- SDR RADIO HANDLER ---
-  # Connects to the RTL-SDR USB stick.
-  # Demodulates 1090MHz signals and exposes them on port 30005 (Beast).
+  # [GPS LOGIC] Connects to Splitter -> Outputs standard GPSD Port 2947
+  gpsd:
+    build: ./gpsd
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - splitter
+    environment:
+      - DEVICES=tcp://127.0.0.1:2000
+      - GPSD_OPTIONS=-n -G
+
+  # [SDR HARDWARE] Connects to Airspy/RTL-SDR -> Outputs Beast Port 30005
   dump1090-fa:
     build: ./dump1090-fa
     privileged: true
@@ -38,37 +44,32 @@ services:
       - readsb-data:/var/lib/readsb/pb
 
   # ==============================================================================
-  # 2. LOCAL INTELLIGENCE & TELEMETRY (The "Bridge" to Central Brain)
+  # 2. LOGIC & TELEMETRY
   # ==============================================================================
 
-  # --- GPS INTEGRITY AGENT ---
-  # Runs the custom 'gpsd_telegraf.sh' script.
-  # Pushes Satellite Count (uSat) and Error (eph) to RPi5 InfluxDB.
+  # [INTEGRITY MONITOR] Pushes GPS Error/Satellites to Central Brain
   telegraf-agent:
     build: ./telegraf-agent
     privileged: true
     network_mode: host
     restart: always
     depends_on:
-      - splitter   # Must wait for GPS TCP server
-    # Note: Configuration (Interval=15s) is baked into the image
+      - splitter
+      - gpsd
 
-  # --- HARDWARE HEALTH MONITOR ---
-  # Pushes RPi4 CPU Temp, RAM, and Disk usage to RPi5 InfluxDB.
+  # [HEALTH MONITOR] Pushes CPU/Temp/RAM to Central Brain
   system-observer:
     build: ./system-observer
-    privileged: true # Needed to read thermal sensors
+    privileged: true
     network_mode: host
     restart: always
     environment:
-      # TARGET: The IP of your Central Brain (RPi5)
       - INFLUX_HOST=192.168.1.134
       - INFLUX_PORT=8086
       - INFLUX_DB=readsb
       - DEVICE_NAME=RPi4-Sensor
 
-  # --- PRECISION TIMING (Roadmap) ---
-  # Calculates Time-Difference-of-Arrival with peer receivers.
+  # [PRECISION TIMING] Multilateration Client
   mlat-client:
     build: ./mlat-client
     network_mode: host
@@ -82,50 +83,50 @@ services:
       - INPUT_PORT=30005
 
   # ==============================================================================
-  # 3. GLOBAL FEEDERS (Community Data Contribution)
+  # 3. GLOBAL FEEDERS
   # ==============================================================================
   
-  # FlightAware
   piaware:
     build: ./piaware
     privileged: true
     network_mode: host
     restart: always
-    depends_on:
-      - dump1090-fa
+    environment:
+      - RECEIVER_HOST=127.0.0.1
+      - RECEIVER_PORT=30005
 
-  # FlightRadar24
   fr24feed:
     build: ./fr24feed
     privileged: true
     network_mode: host
     restart: always
-    depends_on:
-      - dump1090-fa
+    environment:
+      - BEAST_HOST=127.0.0.1
+      - BEAST_PORT=30005
 
-  # PlaneFinder
   planefinder:
     build: ./planefinder
     privileged: true
     network_mode: host
     restart: always
-    depends_on:
-      - dump1090-fa
+    environment:
+      - HOST=127.0.0.1
+      - PORT=30005
 
-  # AirNav RadarBox
   airnav-radar:
     build: ./airnav-radar
     privileged: true
     network_mode: host
     restart: always
-    depends_on:
-      - dump1090-fa
+    environment:
+      - BEASTHOST=127.0.0.1
+      - BEASTPORT=30005
 
-  # OpenSky Network
   opensky-network:
     build: ./opensky-network
     privileged: true
     network_mode: host
     restart: always
-    depends_on:
-      - dump1090-fa
+    environment:
+      - HOST=127.0.0.1
+      - PORT=30005
