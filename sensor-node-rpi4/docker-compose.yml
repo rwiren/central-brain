@@ -1,0 +1,73 @@
+version: '2.1'
+
+volumes:
+  readsb-data:
+
+services:
+  # ==========================================
+  # 1. HARDWARE ABSTRACTION LAYER
+  # ==========================================
+  
+  # Manages the physical GPS USB connection
+  splitter:
+    build: ./splitter
+    privileged: true
+    network_mode: host
+    restart: always
+    environment:
+      # Adjust this if your GPS path differs (check ls /dev/serial/by-id/)
+      - SERIAL_PORT=/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00
+      - BAUD_RATE=9600
+      - TCP_PORT=2000
+
+  # Manages the physical SDR USB connection
+  dump1090-fa:
+    build: ./dump1090-fa
+    privileged: true
+    network_mode: host
+    restart: always
+    environment:
+      - DEVICE_LAT=${LAT}
+      - DEVICE_LON=${LON}
+    volumes:
+      - readsb-data:/var/lib/readsb/pb
+
+  # ==========================================
+  # 2. LOGIC & DATA FORWARDING
+  # ==========================================
+
+  # Pushes GPS Integrity data to Central Brain
+  telegraf-agent:
+    build: ./telegraf-agent
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - splitter
+    # Note: Config is baked into the image via Dockerfile
+
+  # Pushes CPU/Temp/RAM stats to Central Brain
+  system-observer:
+    build: ./system-observer
+    privileged: true
+    network_mode: host
+    restart: always
+    environment:
+      # TARGET: The IP of your RPi5 Central Brain
+      - INFLUX_HOST=192.168.1.134
+      - INFLUX_PORT=8086
+      - INFLUX_DB=readsb
+      - DEVICE_NAME=RPi4-Sensor
+
+  # Future-proofing: Multilateration Calculation Client
+  mlat-client:
+    build: ./mlat-client
+    network_mode: host
+    restart: always
+    environment:
+      - LAT=${LAT}
+      - LON=${LON}
+      - ALT=${ALT}
+      - USER=rwiren
+      - INPUT_HOST=127.0.0.1
+      - INPUT_PORT=30005

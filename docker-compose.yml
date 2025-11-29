@@ -97,7 +97,7 @@ services:
       - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
 
   # ============================================================================
-  # 6. WATCHDOG 2.0 (Spoof Detector + Physics + Runways)
+  # 6. SPOOF DETECTOR (Security & Drift Analysis)
   # ============================================================================
   spoof-detector:
     build: ./spoof-detector
@@ -144,3 +144,24 @@ services:
   #     - INFLUX_DB=readsb
   #     - INFLUX_USER=${INFLUX_USER}
   #     - INFLUX_PASSWORD=${INFLUX_PASSWORD}
+
+# ============================================================================
+  # 9. RUNWAY TRACKER (EFHK Operations)
+  # ============================================================================
+  runway-tracker:
+    build: ./runway-tracker
+    restart: always
+    network_mode: host
+    depends_on:
+      - readsb
+      - influxdb
+    environment:
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_PORT=8086
+      - INFLUX_DB=readsb
+      - SDR_HOST=127.0.0.1
+      - SDR_PORT=8080
+      - MQTT_BROKER=127.0.0.1
+      - TARGET_AIRPORT=EFHK
+      # Point to the internal Grafana container or localhost for the Gazetteer
+      - GAZETTEER_URL=http://127.0.0.1:3000/public/gazetteer/airports.geojson

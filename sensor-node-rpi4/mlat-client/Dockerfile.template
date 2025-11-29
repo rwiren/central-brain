@@ -1,0 +1,47 @@
+FROM balenalib/%%BALENA_ARCH%%-debian:bookworm AS base
+LABEL maintainer="https://github.com/ketilmo"
+
+ENV LAT=
+ENV LON=
+ENV ALT=
+ENV MLAT_CLIENT_USER=
+ENV MLAT_SERVER=
+ENV RECEIVER_HOST=dump1090-fa
+ENV RECEIVER_PORT=30005
+
+ARG PERM_INSTALL="tini python3 python3-venv" 
+
+RUN apt update && \
+	apt install -y $PERM_INSTALL && \
+	apt clean && apt autoclean && apt autoremove && \
+	rm -rf /var/lib/apt/lists/*
+
+FROM base AS buildstep
+
+# renovate: datasource=git-refs depName=wiedehopf/mlat-client versioning=loose
+ARG MLAT_VERSION=a34e48d2c1e0f957bfd5e472283af06c6cc6ddfc
+ARG TEMP_INSTALL="build-essential debhelper python3-dev git" 
+
+RUN apt update && \
+	apt install -y $TEMP_INSTALL
+
+WORKDIR /tmp
+
+RUN git clone --single-branch https://github.com/wiedehopf/mlat-client && \
+	cd mlat-client && \
+        git checkout ${MLAT_VERSION} && \
+    python3 -m venv /usr/local/share/mlat-client/venv/ && \	
+    /usr/local/share/mlat-client/venv/bin/python3 setup.py build && \	
+    /usr/local/share/mlat-client/venv/bin/python3 setup.py install
+
+FROM base AS release
+
+RUN mkdir -p /usr/local/share/mlat-client/venv/
+COPY --from=buildstep /usr/local/share/mlat-client/venv/ /usr/local/share/mlat-client/venv/
+
+COPY start.sh /
+
+RUN chmod +x /start.sh && \
+	rm -rf /tmp/*
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/start.sh"]
