@@ -1,26 +1,31 @@
 version: '2.1'
 
+# Persistent volume for sharing ADS-B state between containers if needed
 volumes:
   readsb-data:
 
 services:
-  # ==========================================
-  # 1. HARDWARE ABSTRACTION LAYER
-  # ==========================================
+  # ==============================================================================
+  # 1. HARDWARE ABSTRACTION LAYER (The "Drivers")
+  # ==============================================================================
   
-  # Manages the physical GPS USB connection
+  # --- GPS HARDWARE HANDLER ---
+  # Connects to the physical U-Blox USB stick.
+  # Serves NMEA data over TCP port 2000 so multiple containers can read it.
   splitter:
     build: ./splitter
     privileged: true
     network_mode: host
     restart: always
     environment:
-      # Adjust this if your GPS path differs (check ls /dev/serial/by-id/)
+      # CRITICAL: This path must match your physical USB device
       - SERIAL_PORT=/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00
       - BAUD_RATE=9600
       - TCP_PORT=2000
 
-  # Manages the physical SDR USB connection
+  # --- SDR RADIO HANDLER ---
+  # Connects to the RTL-SDR USB stick.
+  # Demodulates 1090MHz signals and exposes them on port 30005 (Beast).
   dump1090-fa:
     build: ./dump1090-fa
     privileged: true
@@ -32,34 +37,38 @@ services:
     volumes:
       - readsb-data:/var/lib/readsb/pb
 
-  # ==========================================
-  # 2. LOGIC & DATA FORWARDING
-  # ==========================================
+  # ==============================================================================
+  # 2. LOCAL INTELLIGENCE & TELEMETRY (The "Bridge" to Central Brain)
+  # ==============================================================================
 
-  # Pushes GPS Integrity data to Central Brain
+  # --- GPS INTEGRITY AGENT ---
+  # Runs the custom 'gpsd_telegraf.sh' script.
+  # Pushes Satellite Count (uSat) and Error (eph) to RPi5 InfluxDB.
   telegraf-agent:
     build: ./telegraf-agent
     privileged: true
     network_mode: host
     restart: always
     depends_on:
-      - splitter
-    # Note: Config is baked into the image via Dockerfile
+      - splitter   # Must wait for GPS TCP server
+    # Note: Configuration (Interval=15s) is baked into the image
 
-  # Pushes CPU/Temp/RAM stats to Central Brain
+  # --- HARDWARE HEALTH MONITOR ---
+  # Pushes RPi4 CPU Temp, RAM, and Disk usage to RPi5 InfluxDB.
   system-observer:
     build: ./system-observer
-    privileged: true
+    privileged: true # Needed to read thermal sensors
     network_mode: host
     restart: always
     environment:
-      # TARGET: The IP of your RPi5 Central Brain
+      # TARGET: The IP of your Central Brain (RPi5)
       - INFLUX_HOST=192.168.1.134
       - INFLUX_PORT=8086
       - INFLUX_DB=readsb
       - DEVICE_NAME=RPi4-Sensor
 
-  # Future-proofing: Multilateration Calculation Client
+  # --- PRECISION TIMING (Roadmap) ---
+  # Calculates Time-Difference-of-Arrival with peer receivers.
   mlat-client:
     build: ./mlat-client
     network_mode: host
@@ -71,3 +80,52 @@ services:
       - USER=rwiren
       - INPUT_HOST=127.0.0.1
       - INPUT_PORT=30005
+
+  # ==============================================================================
+  # 3. GLOBAL FEEDERS (Community Data Contribution)
+  # ==============================================================================
+  
+  # FlightAware
+  piaware:
+    build: ./piaware
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - dump1090-fa
+
+  # FlightRadar24
+  fr24feed:
+    build: ./fr24feed
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - dump1090-fa
+
+  # PlaneFinder
+  planefinder:
+    build: ./planefinder
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - dump1090-fa
+
+  # AirNav RadarBox
+  airnav-radar:
+    build: ./airnav-radar
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - dump1090-fa
+
+  # OpenSky Network
+  opensky-network:
+    build: ./opensky-network
+    privileged: true
+    network_mode: host
+    restart: always
+    depends_on:
+      - dump1090-fa
