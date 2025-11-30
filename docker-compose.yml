@@ -8,10 +8,10 @@ volumes:
 
 services:
   # ============================================================================
-  # 1. MQTT BROKER (Notifications & Alerts)
+  # 1. MQTT BROKER (Custom Build from ./mqtt folder)
   # ============================================================================
   mqtt:
-    image: eclipse-mosquitto:latest
+    build: ./mqtt 
     network_mode: host
     restart: always
     volumes:
@@ -27,26 +27,15 @@ services:
     restart: always
     environment:
       - TZ=Europe/Helsinki
-      
-      # --- HARDWARE MODE: NETWORK ONLY ---
       - READSB_NET_ONLY=true
       - READSB_NET_ENABLE=true
-      
-      # --- SOURCE: RPi4 FEEDER ---
-      # Connects to Node 1 (192.168.1.152) on port 30005
       - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
-
-      # --- SMOOTHING & PERFORMANCE ---
       - READSB_NET_BUFFER=2
       - READSB_WRITE_JSON_EVERY=1
-      
-      # --- OUTPUTS ---
       - READSB_WEB_ENABLE=true
       - READSB_NET_BEAST_INPUT_PORT=30004
       - READSB_NET_BEAST_OUTPUT_PORT=30005
       - READSB_NET_SBS_OUTPUT_PORT=30003
-      
-      # --- LOCATION ---
       - READSB_LAT=${LAT}
       - READSB_LON=${LON}
     volumes:
@@ -109,18 +98,19 @@ services:
     environment:
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
       - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
-      - MQTT_BROKER=127.0.0.1
+      # CHANGED: Use LAN IP (192.168.1.134) instead of 127.0.0.1 for Mac compatibility
+      - MQTT_BROKER=192.168.1.134 
       - MQTT_PORT=1883
       - LOCAL_READSB_URL=http://192.168.1.152:8080/data/aircraft.json 
       - MY_LAT=${LAT}
       - MY_LON=${LON}
 
   # ============================================================================
-  # 7. SYSTEM OBSERVER (Health & GPS Stats) - NEW!
+  # 7. SYSTEM OBSERVER (Health & GPS Stats)
   # ============================================================================
   system-observer:
     build: ./system-observer
-    privileged: true  # Required to read /sys/class/thermal/thermal_zone0
+    privileged: true
     restart: always
     network_mode: host
     depends_on:
@@ -131,21 +121,6 @@ services:
       - DEVICE_NAME=Central-Brain
 
   # ============================================================================
-  # 8. PHYSICS GUARD (Legacy - Disabled to prevent double-write)
-  # ============================================================================
-  # physics-guard:
-  #   build: ./physics-guard
-  #   restart: always
-  #   network_mode: host
-  #   environment:
-  #     - READSB_HOST=127.0.0.1
-  #     - READSB_PORT=30003
-  #     - INFLUX_HOST=127.0.0.1
-  #     - INFLUX_DB=readsb
-  #     - INFLUX_USER=${INFLUX_USER}
-  #     - INFLUX_PASSWORD=${INFLUX_PASSWORD}
-
-# ============================================================================
   # 9. RUNWAY TRACKER (EFHK Operations)
   # ============================================================================
   runway-tracker:
@@ -161,12 +136,12 @@ services:
       - INFLUX_DB=readsb
       - SDR_HOST=127.0.0.1
       - SDR_PORT=8080
-      - MQTT_BROKER=127.0.0.1
+      # CHANGED: Use LAN IP for MQTT
+      - MQTT_BROKER=192.168.1.134 
       - TARGET_AIRPORT=EFHK
-      # Point to the internal Grafana container or localhost for the Gazetteer
       - GAZETTEER_URL=http://192.168.1.134:3000/public/gazetteer/airports.geojson
 
-# ============================================================================
+  # ============================================================================
   # 10. FR24 INTELLIGENCE (Global Truth Data)
   # ============================================================================
   fr24-poller:
@@ -176,9 +151,7 @@ services:
     depends_on:
       - influxdb
     environment:
-      - INFLUX_HOST=127.0.0.1
+      - INFLUX_HOST=192.168.1.134
       - INFLUX_DB=readsb
-      # This token needs to be added to Balena Device Variables
       - FR24_API_TOKEN=${FR24_API_TOKEN}
-      # Optional: Tweak the search box if needed
       - FR24_BOUNDS=60.6,59.9,24.3,25.5

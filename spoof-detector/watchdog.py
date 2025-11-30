@@ -9,28 +9,19 @@ import paho.mqtt.client as mqtt
 # ==========================================
 # CONFIGURATION
 # ==========================================
-
-# 1. InfluxDB Settings (The Central Brain)
-INFLUX_HOST = os.getenv('INFLUX_HOST', '127.0.0.1') # or central-brain if running remote
+INFLUX_HOST = os.getenv('INFLUX_HOST', '127.0.0.1')
 INFLUX_PORT = int(os.getenv('INFLUX_PORT', 8086))
 INFLUX_DB   = os.getenv('INFLUX_DB', 'readsb')
 
-# 2. Measurements to Compare
-# 'global_aircraft_state' is what we set up in adsb-feeders to hold OpenSky data
 MEASUREMENT_TRUTH = "global_aircraft_state" 
-# 'aircraft' or 'readsb' is usually the default for local data. 
-# Adjust if your local feeder uses a different name.
 MEASUREMENT_LOCAL = os.getenv('MEASUREMENT_LOCAL', 'aircraft') 
 
-# 3. Thresholds
-DIST_THRESHOLD_KM = 2.0  # Trigger alert if difference is > 2km
+DIST_THRESHOLD_KM = 2.0 
 
-# 4. MQTT Config (For Alerts)
 MQTT_BROKER = os.getenv("MQTT_BROKER", "127.0.0.1")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC_ALERTS = "aviation/alerts"
 
-# Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger("spoof-watchdog")
 
@@ -51,55 +42,69 @@ def setup_mqtt():
         logger.warning(f"MQTT Failed ({e}). Running in Console-Only mode.")
         mqtt_enabled = False
 
-def send_alert(alert_type, details):
-    """Sends alert via MQTT and Logs."""
+def report_to_influx(client, measurement, tags, fields):
+    try:
+        json_body = [{
+            "measurement": measurement,
+            "tags": tags,
+            "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "fields": fields
+        }]
+        client.write_points(json_body)
+    except Exception as e:
+        logger.error(f"Failed to write to Influx: {e}")
+
+# UPDATED: Now accepts positions to save them to the DB
+def send_alert(client, alert_type, details, icao, diff_km, local_pos, truth_pos):
+    """Sends alert via MQTT and writes detailed data to InfluxDB."""
     msg = {
         "type": alert_type,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "details": details
     }
     
-    # Console
+    # 1. Console
     logger.critical(f"🚨 {alert_type}: {details}")
     
-    # MQTT
+    # 2. MQTT
     if mqtt_enabled:
         try:
             mqtt_client.publish(MQTT_TOPIC_ALERTS, json.dumps(msg))
         except:
             pass
 
+    # 3. InfluxDB (Rich Data for Table)
+    # We save floats so Grafana can format them nicely
+    report_to_influx(client, "security_alerts", 
+                     {"type": "spoofing", "icao": icao}, 
+                     {
+                         "message": details, 
+                         "diff_km": float(diff_km), 
+                         "alert_val": 1,
+                         "fr24_lat": float(truth_pos['lat']),
+                         "fr24_lon": float(truth_pos['lon']),
+                         "local_lat": float(local_pos['lat']),
+                         "local_lon": float(local_pos['lon'])
+                     })
+
 # ==========================================
 # DATABASE FUNCTIONS
 # ==========================================
 def get_latest_positions(client, measurement):
-    """
-    Fetches the most recent position for every aircraft seen in the last 60s.
-    Returns: Dict { 'icao_hex': {'lat': float, 'lon': float, 'alt': float} }
-    """
     data = {}
     try:
-        # Query: Get the last recorded point for every aircraft in the last minute
-        # We group by 'icao24' (OpenSky) or 'icao' (Local) or 'hex' depending on schema
-        # This generic query attempts to find tags automatically.
         query = f"""
             SELECT last("lat") as lat, last("lon") as lon, last("alt") as alt, last("baro_alt_m") as alt_m
             FROM "{measurement}" 
             WHERE time > now() - 60s 
             GROUP BY *
         """
-        
         results = client.query(query)
-        
         for (name, tags), points in results.items():
-            # Try to find the ICAO hex code in the tags
             icao = tags.get('icao24') or tags.get('icao') or tags.get('hex') or tags.get('addr')
-            
             if icao:
                 point = list(points)[0]
-                # Normalize Altitude (OpenSky uses 'baro_alt_m', some locals use 'alt')
                 alt = point.get('alt_m') if point.get('alt_m') is not None else point.get('alt')
-                
                 if point['lat'] is not None and point['lon'] is not None:
                     data[icao.lower()] = {
                         'lat': float(point['lat']),
@@ -108,19 +113,16 @@ def get_latest_positions(client, measurement):
                     }
     except Exception as e:
         logger.error(f"Query Error ({measurement}): {e}")
-        
     return data
 
 # ==========================================
 # MAIN LOOP
 # ==========================================
 def main():
-    logger.info("--- SPOOF DETECTOR (InfluxDB Backend) STARTING ---")
+    logger.info("--- SPOOF DETECTOR v2.1 (Expanded Logging) STARTING ---")
     setup_mqtt()
     
     db_client = InfluxDBClient(host=INFLUX_HOST, port=INFLUX_PORT)
-    
-    # Wait for DB connection
     while True:
         try:
             db_client.switch_database(INFLUX_DB)
@@ -130,52 +132,41 @@ def main():
             logger.warning(f"Waiting for InfluxDB... ({e})")
             time.sleep(5)
 
-    # Analysis Loop
     while True:
         try:
-            # 1. Get Truth (OpenSky)
             truth_data = get_latest_positions(db_client, MEASUREMENT_TRUTH)
-            
-            # 2. Get Local (Readsb)
             local_data = get_latest_positions(db_client, MEASUREMENT_LOCAL)
             
             if not truth_data:
-                logger.info("Waiting for OpenSky data (Truth source is empty)...")
+                logger.info("Waiting for OpenSky/FR24 data...")
             
-            # 3. Compare
             matches = 0
-            anomalies = 0
             
             for icao, local_pos in local_data.items():
                 if icao in truth_data:
                     matches += 1
                     truth_pos = truth_data[icao]
                     
-                    # Calculate physical distance between reported positions
                     p1 = (local_pos['lat'], local_pos['lon'])
                     p2 = (truth_pos['lat'], truth_pos['lon'])
-                    
                     distance = geodesic(p1, p2).km
                     
+                    # Drift Metric
+                    report_to_influx(db_client, "gps_drift", 
+                                     {"icao": icao}, 
+                                     {"drift_km": float(distance)})
+                    
                     if distance > DIST_THRESHOLD_KM:
-                        anomalies += 1
-                        details = (
-                            f"ICAO: {icao} | "
-                            f"Local: {p1} | "
-                            f"OpenSky: {p2} | "
-                            f"Diff: {distance:.2f}km"
-                        )
-                        send_alert("GPS SPOOFING DETECTED", details)
+                        details = f"ICAO: {icao} | Diff: {distance:.2f}km"
+                        # UPDATED CALL: Passing positions
+                        send_alert(db_client, "GPS SPOOFING DETECTED", details, icao, distance, local_pos, truth_pos)
             
             if matches > 0:
-                logger.info(f"Scanned {len(local_data)} local aircraft. Matches: {matches}. Spoofing Alerts: {anomalies}")
-            else:
-                logger.debug(f"Scanning... Local: {len(local_data)} | Truth: {len(truth_data)}")
-
+                logger.info(f"Scanned {len(local_data)} aircraft. Matches: {matches}.")
+                
         except Exception as e:
             logger.error(f"Loop Error: {e}")
 
-        # Sleep interval (OpenSky updates every 10-20s, so checking every 15s is efficient)
         time.sleep(15)
 
 if __name__ == "__main__":
