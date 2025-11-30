@@ -9,263 +9,296 @@ import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
 
 # ==========================================
-# 1. CONFIGURATION
+# 1. CONFIGURATION & SETUP
 # ==========================================
 
-# SDR / Data Source
+# --- DATA SOURCE (SDR) ---
+# We pull JSON data from the local readsb container on the RPi5.
 SDR_HOST = os.getenv('SDR_HOST', 'readsb')
 SDR_PORT = os.getenv('SDR_PORT', '8080')
 SDR_URL = f"http://{SDR_HOST}:{SDR_PORT}/data/aircraft.json"
 
-# Central Brain Assets (The Gazetteer)
-# Defaults to the internal docker DNS for the grafana container
-GAZETTEER_URL = os.getenv('GAZETTEER_URL', 'http://grafana:3000/public/gazetteer/airports.geojson')
+# --- TARGET AIRPORT ---
 TARGET_AIRPORT_CODE = os.getenv('TARGET_AIRPORT', 'EFHK')
+# Center of Helsinki-Vantaa (EFHK)
+AIRPORT_CENTER = (60.3172, 24.9633) 
 
-# InfluxDB Settings (Forcing 'readsb' based on your logs)
-INFLUX_HOST = os.getenv('INFLUX_HOST', 'influxdb')
+# --- INFLUXDB CONNECTION ---
+# Connects to the local database to store history.
+INFLUX_HOST = os.getenv('INFLUX_HOST', '127.0.0.1')
 INFLUX_PORT = int(os.getenv('INFLUX_PORT', 8086))
-INFLUX_DB = os.getenv('INFLUX_DB', 'readsb') 
+INFLUX_DB = os.getenv('INFLUX_DB', 'readsb')
 INFLUX_USER = os.getenv('INFLUX_USER', '')
 INFLUX_PASS = os.getenv('INFLUX_PASS', '')
 
-# MQTT Settings
+# --- MQTT CONNECTION ---
+# Publishes real-time alerts to the broker for other services/UIs.
 MQTT_BROKER = os.getenv('MQTT_BROKER', 'mqtt')
 MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
 MQTT_TOPIC = "aviation/events"
 
-# Logging
+# --- LOGGING SETUP ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(name)s] %(message)s')
 logger = logging.getLogger("RunwayTracker")
 
 # ==========================================
-# 2. AIRPORT & PHYSICS CONSTANTS
+# 2. TUNING & CONSTANTS
 # ==========================================
 
-# Default Center (Will be overwritten by Gazetteer if available)
-AIRPORT_CENTER = (60.3172, 24.9633) # EFHK
+# DEBUG_MODE: If True, logic is very loose to catch ANY traffic near the airport.
+# If False, requires strict runway alignment.
+DEBUG_MODE = True 
 
-# [TUNING] How far out to track planes?
-# 40km allows catching the glide slope early.
-MONITOR_RADIUS_KM = 40 
+# Search Radius: 
+# 100km in Debug mode allows us to track planes on approach from Tallinn/Turku.
+MONITOR_RADIUS_KM = 100 if DEBUG_MODE else 40
 
-# Precise Runway Thresholds (EFHK)
-# Start = Threshold, End = Stop End, Heading = Magnetic
+# EFHK Runway Definitions (Threshold coordinates)
 RUNWAYS = {
-    "04L": {"start": (60.3129, 24.9038), "end": (60.3311, 24.9438), "heading": 46},
-    "22R": {"start": (60.3311, 24.9438), "end": (60.3129, 24.9038), "heading": 226},
-    "04R": {"start": (60.3098, 24.9331), "end": (60.3306, 24.9790), "heading": 46},
-    "22L": {"start": (60.3306, 24.9790), "end": (60.3098, 24.9331), "heading": 226},
-    "15":  {"start": (60.3302, 24.9644), "end": (60.3070, 24.9882), "heading": 151},
-    "33":  {"start": (60.3070, 24.9882), "end": (60.3302, 24.9644), "heading": 331}
+    "04L": {"start": (60.3129, 24.9038), "heading": 46},
+    "22R": {"start": (60.3311, 24.9438), "heading": 226},
+    "04R": {"start": (60.3098, 24.9331), "heading": 46},
+    "22L": {"start": (60.3306, 24.9790), "heading": 226},
+    "15":  {"start": (60.3302, 24.9644), "heading": 151},
+    "33":  {"start": (60.3070, 24.9882), "heading": 331}
 }
 
-# Flight History Memory
-flight_history = {} 
+# In-memory state to track aircraft across multiple poll cycles
+flight_history = {}
 
 # ==========================================
 # 3. LOGIC FUNCTIONS
 # ==========================================
 
-def fetch_airport_metadata():
-    """Auto-configures airport location from local gazetteer."""
-    global AIRPORT_CENTER
-    logger.info(f"Fetching metadata for {TARGET_AIRPORT_CODE}...")
-    try:
-        r = requests.get(GAZETTEER_URL, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            for feature in data.get('features', []):
-                props = feature.get('properties', {})
-                if props.get('gps_code') == TARGET_AIRPORT_CODE:
-                    # GeoJSON is [Lon, Lat], Geopy needs (Lat, Lon)
-                    coords = feature['geometry']['coordinates']
-                    AIRPORT_CENTER = (coords[1], coords[0])
-                    logger.info(f"✅ Locked on {props['name']} at {AIRPORT_CENTER}")
-                    return
-    except Exception as e:
-        logger.warning(f"Gazetteer skipped: {e}")
-
 def get_runway_alignment(lat, lon, track):
-    """Checks if aircraft is aligned with any runway."""
+    """
+    Determines if a plane is aligned with a runway.
+    Returns: (Runway Name, Distance km) or (None, None)
+    """
     for rwy, data in RUNWAYS.items():
-        # [TUNING] Heading Tolerance (+/- degrees)
-        # 25 deg accounts for crab angle during crosswind landings
+        # 1. Heading Check: Is the plane pointing at the runway? (+/- 30 deg)
         diff = abs(track - data["heading"])
         if diff > 180: diff = 360 - diff
-        if diff > 25: continue 
+        if diff > 30: continue 
 
-        # [TUNING] Distance from Threshold (km)
-        # 25km captures the "Established on Localizer" phase.
+        # 2. Distance Check: Is it close to the threshold?
         dist = geodesic((lat, lon), data["start"]).km
-        if dist < 25.0:
+        
+        # In Debug mode, we allow detection up to 30km out.
+        # In Strict mode, only 20km.
+        limit = 30.0 if DEBUG_MODE else 20.0
+        
+        if dist < limit:
             return rwy, dist
+            
     return None, None
 
 def detect_phase(alt, v_rate, speed):
     """
-    Classifies flight phase based on physics.
+    Classifies the flight phase based on physics data.
     """
-    # [TUNING] Ground Logic
-    # Speed < 40kts AND Alt < 500ft (AGL approx) = Taxiing
-    if alt < 500 and speed < 40: 
-        return "GROUND"
+    # GROUND: Very low and slow
+    if alt < 500 and speed < 40: return "GROUND"
     
-    # [TUNING] Takeoff Roll Logic
-    # Speed > 40kts BUT Vertical Rate is low (< 400fpm) = Rolling for Takeoff
-    # This detects the acceleration phase before lift-off
-    if alt < 800 and speed >= 40 and v_rate < 400:
-        return "ROLLING"
-
-    # [TUNING] Descent Logic
-    # Any negative vertical rate or holding level while aligned
-    if v_rate < -50: 
-        return "DESCENDING"
-        
-    # [TUNING] Climb Logic
-    # Positive rate > 200fpm means they are airborne
-    if v_rate > 200: 
-        return "CLIMBING"
-        
+    # ROLLING: Low altitude, speed picking up, but not climbing fast yet
+    if alt < 800 and speed >= 40 and v_rate < 400: return "ROLLING"
+    
+    # AIRBORNE PHASES
+    if v_rate < -50: return "DESCENDING"
+    if v_rate > 200: return "CLIMBING"
+    
     return "LEVEL"
 
 def main():
-    print(f"--- Runway Ops Tracker v2.3 ({TARGET_AIRPORT_CODE}) ---")
-    fetch_airport_metadata()
-    
-    # --- DB Setup ---
+    logger.info(f"--- Runway Ops Tracker v3.0 ({TARGET_AIRPORT_CODE}) ---")
+    logger.info(f"--- DEBUG MODE: {DEBUG_MODE} ---")
+
+    # --------------------------------------
+    # DATABASE CONNECTION LOOP
+    # --------------------------------------
     client_influx = InfluxDBClient(host=INFLUX_HOST, port=INFLUX_PORT, username=INFLUX_USER, password=INFLUX_PASS)
     while True:
         try:
-            dbs = client_influx.get_list_database()
-            if not any(d['name'] == INFLUX_DB for d in dbs):
-                client_influx.create_database(INFLUX_DB)
+            # Try to create DB if it doesn't exist
+            client_influx.create_database(INFLUX_DB)
             client_influx.switch_database(INFLUX_DB)
-            print(f"Connected to InfluxDB: {INFLUX_DB}")
+            logger.info(f"✅ Connected to InfluxDB: {INFLUX_DB}")
             break
-        except:
-            print("Waiting for InfluxDB...")
+        except Exception as e:
+            logger.warning(f"Waiting for InfluxDB... ({e})")
             time.sleep(5)
 
-    # --- MQTT Setup (CRASH FIX) ---
-    # We explicitly use CallbackAPIVersion.VERSION2 to support paho-mqtt 2.0.0+
+    # --------------------------------------
+    # MQTT CONNECTION
+    # --------------------------------------
     try:
+        # Use VERSION2 callback API to avoid paho-mqtt 2.x crash
         client_mqtt = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, "RunwayTracker")
         client_mqtt.connect(MQTT_BROKER, MQTT_PORT)
         client_mqtt.loop_start()
-        print("MQTT Connected")
+        logger.info("✅ MQTT Connected")
+        
+        # Announce startup
+        client_mqtt.publish(MQTT_TOPIC, json.dumps({"status": "online", "msg": "Tracker v3.0 Started", "debug": DEBUG_MODE}))
     except Exception as e:
-        print(f"MQTT Failed ({e}) - Running offline mode")
+        logger.error(f"MQTT Failed: {e}")
         client_mqtt = None
 
-    # --- Main Loop ---
+    # --------------------------------------
+    # MAIN POLLING LOOP
+    # --------------------------------------
     while True:
         try:
-            r = requests.get(SDR_URL, timeout=2)
-            if r.status_code != 200: 
+            # 1. Fetch Data from SDR
+            try:
+                r = requests.get(SDR_URL, timeout=2)
+                if r.status_code != 200:
+                    time.sleep(1)
+                    continue
+                    
+                # Protect against empty response
+                if not r.text.strip():
+                    continue
+                    
+                data = r.json()
+                aircraft = data.get('aircraft', [])
+            except Exception as e:
+                # Silent fail on fetch error to keep logs clean
                 time.sleep(1)
                 continue
-            
-            aircraft = r.json().get('aircraft', [])
-            current_time = time.time()
+
             points = []
 
+            # 2. Process Each Aircraft
             for ac in aircraft:
+                # Validate Data
                 icao = ac.get('hex')
-                # Skip if missing critical data
-                if not icao or 'lat' not in ac or 'track' not in ac: continue
-
-                # Distance Filter (Global)
-                if geodesic((ac['lat'], ac['lon']), AIRPORT_CENTER).km > MONITOR_RADIUS_KM:
+                if not icao or 'lat' not in ac or 'lon' not in ac: continue
+                
+                # Filter by Distance (Global)
+                dist_to_airport = geodesic((ac['lat'], ac['lon']), AIRPORT_CENTER).km
+                if dist_to_airport > MONITOR_RADIUS_KM: 
+                    # Clean up memory if plane flies away
                     if icao in flight_history: del flight_history[icao]
                     continue
 
-                # Physics Extraction
+                # Extract Physics
                 alt = ac.get('alt_baro', 0)
                 v_rate = ac.get('baro_rate', 0)
                 speed = ac.get('gs', 0)
                 track = ac.get('track', 0)
                 callsign = ac.get('flight', 'N/A').strip()
-
-                # Analysis
-                rwy, dist = get_runway_alignment(ac['lat'], ac['lon'], track)
+                
+                # Calculate State
+                rwy, dist_to_rwy = get_runway_alignment(ac['lat'], ac['lon'], track)
                 phase = detect_phase(alt, v_rate, speed)
                 
-                # State Machine
+                # Retrieve History
                 history = flight_history.get(icao, {"state": "UNKNOWN", "logged": False})
                 prev_state = history["state"]
-                event_type = None
                 
-                # 1. DETECT LANDING (Loosened Logic)
-                # Detects up to 4000ft altitude and 12km out
-                if rwy and phase == "DESCENDING" and alt < 4000:
-                    flight_history[icao] = {
-                        "state": "APPROACH", 
-                        "rwy": rwy, 
-                        "logged": history["logged"]
-                    }
+                event_type = None
+                event_rwy = rwy
+
+                # --------------------------------------
+                # SCENARIO A: LANDING DETECTION
+                # --------------------------------------
+                # Logic: Aligned with runway + Descending + Low Altitude
+                landing_alt_limit = 10000 if DEBUG_MODE else 4000
+                
+                if rwy and phase == "DESCENDING" and alt < landing_alt_limit:
+                    flight_history[icao]["state"] = "APPROACH"
                     
-                    # Log event if we haven't already for this approach
-                    if not history["logged"] and dist < 12.0:
+                    # Log Event (Once per approach)
+                    if not history["logged"] and dist_to_rwy < 15.0:
                         event_type = "landing"
                         flight_history[icao]["logged"] = True
                         logger.info(f"🛬 LANDING: {callsign} on {rwy} (Alt: {alt}ft)")
 
-                # 2. DETECT TAKEOFF
-                # If previously GROUND or ROLLING, and now CLIMBING
+                # --------------------------------------
+                # SCENARIO B: TAKEOFF DETECTION
+                # --------------------------------------
+                # Logic 1 (Strict): Transition from Ground/Rolling -> Climbing
                 elif (prev_state == "GROUND" or prev_state == "ROLLING") and phase == "CLIMBING" and rwy:
-                     if not history.get("logged", False):
+                     if not history["logged"]:
                         event_type = "takeoff"
                         flight_history[icao]["logged"] = True
                         flight_history[icao]["state"] = "CLIMBOUT"
-                        logger.info(f"🛫 TAKEOFF: {callsign} on {rwy} (Spd: {speed}kts)")
-                
-                # 3. TRACKING THE ROLL
+                        logger.info(f"🛫 TAKEOFF: {callsign} from {rwy}")
+
+                # Logic 2 (Debug/Loose): Just climbing near airport (missed ground phase)
+                elif DEBUG_MODE and phase == "CLIMBING" and rwy and alt < 6000 and not history["logged"]:
+                        event_type = "takeoff"
+                        flight_history[icao]["logged"] = True
+                        flight_history[icao]["state"] = "CLIMBOUT"
+                        logger.info(f"🛫 TAKEOFF (Air Detected): {callsign} from {rwy}")
+
+                # --------------------------------------
+                # SCENARIO C: CATCH-ALL (NEARBY)
+                # --------------------------------------
+                # If DEBUG is on, log ANY descending plane near airport even if not aligned
+                elif DEBUG_MODE and not rwy and dist_to_airport < 20.0 and phase == "DESCENDING" and not history["logged"]:
+                    event_type = "landing"
+                    event_rwy = "NEARBY" # Placeholder runway name
+                    flight_history[icao]["logged"] = True
+                    logger.info(f"🛬 NEARBY DESCENT: {callsign} (No runway match)")
+
+                # --------------------------------------
+                # STATE UPDATES
+                # --------------------------------------
                 elif phase == "ROLLING":
                      flight_history[icao] = {"state": "ROLLING", "rwy": rwy, "logged": history["logged"]}
-                
-                # 4. DETECT GO-AROUND
-                elif prev_state == "APPROACH" and phase == "CLIMBING" and alt < 3500 and rwy:
-                    if history.get("rwy") == rwy:
-                        event_type = "go_around"
-                        logger.warning(f"🚨 GO AROUND: {callsign} on {rwy}")
-                        flight_history[icao]["state"] = "CLIMBOUT"
-
-                # Reset State on Ground
-                if phase == "GROUND":
+                elif phase == "GROUND":
                     flight_history[icao] = {"state": "GROUND", "logged": False}
 
-                # Write to InfluxDB
+                # --------------------------------------
+                # WRITE TO DB & MQTT
+                # --------------------------------------
                 if event_type:
+                    # 1. InfluxDB Data Point
                     points.append({
                         "measurement": "runway_events",
                         "tags": {
-                            "event": event_type,
-                            "runway": rwy,
-                            "callsign": callsign,
+                            "event": event_type, 
+                            "runway": event_rwy, 
+                            "callsign": callsign, 
                             "icao": icao
                         },
                         "fields": {
-                            "altitude": float(alt),
-                            "speed": float(speed),
+                            "altitude": float(alt), 
+                            "speed": float(speed), 
                             "value": 1
                         }
                     })
                     
-                    # Update Active Runway State
-                    points.append({
-                        "measurement": "airport_ops",
-                        "tags": {"airport": TARGET_AIRPORT_CODE},
-                        "fields": {"active_runway": rwy}
-                    })
+                    # 2. Update Active Runway Panel
+                    if event_rwy != "NEARBY":
+                        points.append({
+                            "measurement": "airport_ops",
+                            "tags": {"airport": TARGET_AIRPORT_CODE},
+                            "fields": {"active_runway": event_rwy}
+                        })
 
+                    # 3. MQTT Publish
+                    if client_mqtt:
+                        payload = {
+                            "event": event_type,
+                            "runway": event_rwy,
+                            "callsign": callsign,
+                            "alt": alt,
+                            "timestamp": datetime.utcnow().isoformat()
+                        }
+                        client_mqtt.publish(MQTT_TOPIC, json.dumps(payload))
+
+            # Batch Write to DB
             if points:
                 client_influx.write_points(points)
 
         except Exception as e:
+            # General loop error catcher
             logger.error(f"Loop Error: {e}")
-        
-        time.sleep(1)
+            
+        time.sleep(2)
 
 if __name__ == "__main__":
     main()

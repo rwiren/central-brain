@@ -126,7 +126,7 @@ services:
     depends_on:
       - influxdb
     environment:
-      - INFLUX_HOST=127.0.0.1
+      - INFLUX_HOST=192.168.1.134
       - INFLUX_DB=readsb
       - DEVICE_NAME=Central-Brain
 
@@ -156,7 +156,7 @@ services:
       - readsb
       - influxdb
     environment:
-      - INFLUX_HOST=127.0.0.1
+      - INFLUX_HOST=192.168.1.134
       - INFLUX_PORT=8086
       - INFLUX_DB=readsb
       - SDR_HOST=127.0.0.1
@@ -164,4 +164,21 @@ services:
       - MQTT_BROKER=127.0.0.1
       - TARGET_AIRPORT=EFHK
       # Point to the internal Grafana container or localhost for the Gazetteer
-      - GAZETTEER_URL=http://127.0.0.1:3000/public/gazetteer/airports.geojson
+      - GAZETTEER_URL=http://192.168.1.134:3000/public/gazetteer/airports.geojson
+
+# ============================================================================
+  # 10. FR24 INTELLIGENCE (Global Truth Data)
+  # ============================================================================
+  fr24-poller:
+    build: ./fr24-poller
+    restart: always
+    network_mode: host
+    depends_on:
+      - influxdb
+    environment:
+      - INFLUX_HOST=127.0.0.1
+      - INFLUX_DB=readsb
+      # This token needs to be added to Balena Device Variables
+      - FR24_API_TOKEN=${FR24_API_TOKEN}
+      # Optional: Tweak the search box if needed
+      - FR24_BOUNDS=60.6,59.9,24.3,25.5
