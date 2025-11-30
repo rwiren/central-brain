@@ -106,7 +106,8 @@ graph LR
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
 
-### More complex diagram
+### More complex diagram 
+[View Diagram](https://github.com/rwiren/central-brain/blob/main/assets/mermaid_complex_diagram.png)
 
 ```mermaid
 graph LR
