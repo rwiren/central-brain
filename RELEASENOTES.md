@@ -1,12 +1,13 @@
-# Release Notes - v0.9.1-beta (Central Brain)
+# Release Notes
 
-## v0.9.1-beta (The "Red Team" Release)
+## v1.3.0 (The "Red Team" Release)
 **Date:** 2025-11-30
-**Status:** Beta / Stable
+**Status:** Stable / Production
 
 ### 🚀 New Features
 * **Physics Guard Engine:** New microservice (`physics-guard`) that monitors live telemetry for kinematic anomalies (e.g., Mach > 0.95, VSI > 6000 fpm).
-* **Red Team Suite:** Added `tools/physics_test.py` to simulate hypersonic threats (Mach 3.0+) for system validation.
+* **Red Team Suite:** Added `spoof_simulator.py` and `physics_test.py` for system validation.
+* **Central Brain Dashboard:** Complete integration of live runway logic and security alerts.
 * **Architecture Diagram:** Updated Wiki documentation with v0.9 data flow logic.
 
 ### 🐛 Bug Fixes
