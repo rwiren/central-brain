@@ -357,6 +357,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ├── adsb-feeders/              # Ingestion Pipelines (OpenSky and Local Readsb -> InfluxDB)
 ├── fr24-poller/               # External Truth Feed (FlightRadar24 -> InfluxDB)
 ├── spoof-detector/            # CORE Logic: GPS Integrity Analysis (Watchdog)
+├── system-observer/           # Monitor: Hardware Health (CPU/Temp) & Local Weather (METAR)
 ├── physics-guard/             # CORE Logic: Kinematic Integrity (Mach/VSI Checks)
 ├── runway-tracker/            # CORE Logic: Airport Operations (EFHK FIDS)
 ├── sensor-node-rpi4/          # Reference code for remote Sensing Nodes
