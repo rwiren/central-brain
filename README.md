@@ -232,7 +232,7 @@ The core processing unit for data fusion and analysis.
     * **Spoof Detector:** Compares *Local* vs. *Truth* data; triggers alerts if drift > 2km.
 
 **3. The Action Layer**
-* **Output:** **Grafana** renders the [Command Dashboard](https://github.com/rwiren/central-brain/wiki/System-Visualization-&-Logic-Architecture) while critical alerts are published to **MQTT**.
+* **Output:** **Grafana** renders the [Command Dashboard](https://github.com/rwiren/central-brain/wiki/Grafana-Dahboard) while critical alerts are published to **MQTT**.
 * **Red Team:** The **Spoof Simulator** validates defense logic by injecting synthetic attack vectors into the datastore.
 
 
