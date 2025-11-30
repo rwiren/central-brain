@@ -361,9 +361,10 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ├── runway-tracker/            # CORE Logic: Airport Operations (EFHK FIDS)
 ├── system-observer/           # Monitor: Hardware Health (CPU/Temp) & Local Weather (METAR)
 ├── sensor-node-rpi4/          # Reference code for remote Sensing Nodes
-│   ├── dump1090-fa/           # SDR Logic
+│   ├── dump1090-fa/           # SDR Logic (RF Demodulation)
+│   ├── gpsd/                  # GNSS & Time Synchronization
 │   ├── telegraf-agent/        # Health telemetry pusher
-│   └── ...                    # Various feeder clients
+│   └── ...                    # Feeders (FR24, OpenSky, Piaware, Planefinder, AirNav)
 ├── tools/                     # Red Team Suite & Planning Utilities
 │   ├── spoof_simulator.py     # GPS Injection Attack Tool
 │   ├── physics_test.py        # Hypersonic Kinematics Test Tool
