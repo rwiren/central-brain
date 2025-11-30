@@ -386,7 +386,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ## 🛠 Deployment
 
 1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
-    * **Variables:** `LAT`, `LON`, `INFLUX_USER`, `INFLUX_PASSWORD`, `GRAFANA_PASSWORD`
+    * **Variables:** `LAT`, `LON`, `INFLUX_USER`, `INFLUX_PASSWORD`, `GRAFANA_PASSWORD`, `FR24_API_TOKEN`
     * **OAuth2 Credentials:** `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` (Mandatory for API access).
 
 2.  **Deployment:** Push the current repository to your Balena application.
