@@ -60,6 +60,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 ## 📐 System Data Flow
 
 ### Simple diagram
+[View simple diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_simple_diagram.png)
 
 ```mermaid
 graph LR
@@ -105,10 +106,11 @@ graph LR
     style DASH fill:#e8f5e9,stroke:#2e7d32
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
-[View simple diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_simple_diagram.png)
 
 
-### More complex diagram 
+
+### More complex diagram
+[View more complex diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_complex_diagram.png)
 
 ```mermaid
 graph LR
@@ -209,7 +211,7 @@ graph LR
     class GRAF dashboard;
     class API_FR24,API_OS external;
 ```
-[View more complex diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_complex_diagram.png)
+
 
 ---
 
