@@ -62,7 +62,7 @@ def main():
                 }
             ]
             client.write_points(json_body, database=INFLUX_DB)
-            logger.info(f"Pushed: {temp}°C | CPU: {cpu}% | DISK: {disk}%")
+            logger.info(f"Pushed: {temp}C | CPU: {cpu}% | DISK: {disk}%")
 
         except Exception as e:
             logger.error(f"Connection Error to Central Brain: {e}")

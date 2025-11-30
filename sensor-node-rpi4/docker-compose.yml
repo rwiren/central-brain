@@ -1,132 +1,257 @@
-version: '2.1'
+version: '2.4'
 
 volumes:
-  readsb-data:
+  settings:
+  airnav-radar:
+  tar1090:
 
 services:
-  # ==============================================================================
-  # 1. HARDWARE ABSTRACTION LAYER
-  # ==============================================================================
+  # ============================================================================
+  # SECTION 1: GPS & TELEMETRY CHAIN
+  # Data Flow: USB GPS -> Splitter -> GPSD -> Telegraf -> RPi5 InfluxDB
+  # ============================================================================
   
-  # [GPS HARDWARE] Connects to USB Stick -> Outputs TCP 2000
+  # 1.1 USB Splitter (Handles Raw Hardware)
   splitter:
     build: ./splitter
-    privileged: true
-    network_mode: host
     restart: always
+    privileged: true
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
     environment:
-      - SERIAL_PORT=/dev/ttyACM0
-      - BAUD_RATE=9600
-      - TCP_PORT=2000
+      - NTRIP_HOST=rtk2go.com
+      - NTRIP_PORT=2101
+      - NTRIP_MOUNT=knummi_kha
+      - NTRIP_USER=rwiren@gmail.com
+      - NTRIP_PASS=none
+    expose:
+      - "2000"
+    labels:
+      io.balena.features.supervisor-api: '1'
 
-  # [GPS LOGIC] Connects to Splitter -> Outputs standard GPSD Port 2947
+  # 1.2 GPS Daemon (Decodes Raw GPS for Linux)
   gpsd:
     build: ./gpsd
-    privileged: true
-    network_mode: host
     restart: always
+    privileged: true
     depends_on:
       - splitter
+    devices:
+      - /dev/pps0:/dev/pps0
     environment:
-      - DEVICES=tcp://127.0.0.1:2000
+      - TZ=Europe/Helsinki
+      - DEVICES=tcp://splitter:2000 /dev/pps0
       - GPSD_OPTIONS=-n -G
+    command: tcp://splitter:2000 /dev/pps0
+    ports:
+      - "2947:2947"
+    labels:
+      io.balena.features.supervisor-api: '1'
 
-  # [SDR HARDWARE] Connects to Airspy/RTL-SDR -> Outputs Beast Port 30005
-  dump1090-fa:
-    build: ./dump1090-fa
-    privileged: true
-    network_mode: host
-    restart: always
-    environment:
-      - DEVICE_LAT=${LAT}
-      - DEVICE_LON=${LON}
-    volumes:
-      - readsb-data:/var/lib/readsb/pb
-
-  # ==============================================================================
-  # 2. LOGIC & TELEMETRY
-  # ==============================================================================
-
-  # [INTEGRITY MONITOR] Pushes GPS Error/Satellites to Central Brain
-  telegraf-agent:
+  # 1.3 Telegraf Agent (Sends GPS Integrity Data to RPi5)
+  telegraf:
     build: ./telegraf-agent
-    privileged: true
-    network_mode: host
     restart: always
+    network_mode: host
     depends_on:
-      - splitter
       - gpsd
+    labels:
+      io.balena.features.supervisor-api: '1'
 
-  # [HEALTH MONITOR] Pushes CPU/Temp/RAM to Central Brain
+  # 1.4 System Observer (Monitors CPU/RAM/Temp -> Sends to RPi5)
   system-observer:
     build: ./system-observer
     privileged: true
-    network_mode: host
     restart: always
+    network_mode: host
     environment:
+      # Target: Central Brain (RPi5) IP
       - INFLUX_HOST=192.168.1.134
-      - INFLUX_PORT=8086
       - INFLUX_DB=readsb
       - DEVICE_NAME=RPi4-Sensor
+    labels:
+      io.balena.features.supervisor-api: '1'
 
-  # [PRECISION TIMING] Multilateration Client
-  mlat-client:
-    build: ./mlat-client
-    network_mode: host
-    restart: always
+  # ============================================================================
+  # SECTION 2: SDR & DECODER (The "Beast")
+  # ============================================================================
+  dump1090-fa:
+    build: ./dump1090-fa
+    image: dump1090-fa
+    restart: unless-stopped
+    privileged: true
     environment:
-      - LAT=${LAT}
-      - LON=${LON}
-      - ALT=${ALT}
-      - USER=rwiren
-      - INPUT_HOST=127.0.0.1
-      - INPUT_PORT=30005
+      - LAT=60.3195
+      - LON=24.8310
+    devices:
+      - "/dev/bus/usb"
+    expose:
+      # Beast Output (Used by Feeders)
+      - "30005"
+      # BaseStation Output
+      - "30003"
+    ports:
+      - "30003:30003"
+      - "30005:30005"
+      - "8080:8080"
+    labels:
+      - "io.balena.features.supervisor-api=1"
+      - "traefik.enable=true"
+      # Routing for SkyAware Web UI
+      - "traefik.http.routers.skyaware.rule=PathPrefix(`/skyaware`)"
+      - "traefik.http.middlewares.skyaware-redirect.redirectregex.regex=^.*/skyaware$$"
+      - "traefik.http.middlewares.skyaware-redirect.redirectregex.replacement=/skyaware/"
+      - "traefik.http.middlewares.skyaware-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.dump1090-fa.rule=PathPrefix(`/dump1090-fa`)"
+      - "traefik.http.middlewares.dump1090-fa-redirect.redirectregex.regex=^.*/dump1090-fa.*$$"
+      - "traefik.http.middlewares.dump1090-fa-redirect.redirectregex.replacement=/skyaware/"
+      - "traefik.http.middlewares.dump1090-fa-redirect.redirectregex.permanent=true"
 
-  # ==============================================================================
-  # 3. GLOBAL FEEDERS
-  # ==============================================================================
+  # ============================================================================
+  # SECTION 3: ADS-B FEEDERS
+  # ============================================================================
   
-  piaware:
-    build: ./piaware
-    privileged: true
-    network_mode: host
-    restart: always
-    environment:
-      - RECEIVER_HOST=127.0.0.1
-      - RECEIVER_PORT=30005
-
-  fr24feed:
-    build: ./fr24feed
-    privileged: true
-    network_mode: host
-    restart: always
-    environment:
-      - BEAST_HOST=127.0.0.1
-      - BEAST_PORT=30005
-
-  planefinder:
-    build: ./planefinder
-    privileged: true
-    network_mode: host
-    restart: always
-    environment:
-      - HOST=127.0.0.1
-      - PORT=30005
-
+  # 3.1 AirNav RadarBox
   airnav-radar:
+    depends_on:
+      - dump1090-fa
     build: ./airnav-radar
-    privileged: true
-    network_mode: host
-    restart: always
+    image: airnav-radar
+    restart: unless-stopped
+    expose:
+      - "32088"
     environment:
-      - BEASTHOST=127.0.0.1
-      - BEASTPORT=30005
+      - AIRNAV_RADAR_KEY=
+      - LAT=60.3195
+      - LON=24.8310
+      - ALT=96
+    volumes:
+      - 'airnav-radar:/sys/class/thermal:ro'
+      - 'airnav-radar:/var/radarbox/thermal'
+    labels:
+      io.balena.features.supervisor-api: '1'
 
-  opensky-network:
-    build: ./opensky-network
-    privileged: true
-    network_mode: host
-    restart: always
+  # 3.2 Planefinder (FIXED)
+  planefinder:
+    depends_on:
+      - dump1090-fa
+    build: ./planefinder
+    image: planefinder
+    restart: unless-stopped
+    ports:
+      - "30053:30053"
     environment:
-      - HOST=127.0.0.1
-      - PORT=30005
+      # Critical: Tells Planefinder where to get data
+      - BEASTHOST=dump1090-fa
+      - LAT=60.3195
+      - LON=24.8310
+      # Add your sharecode here to restore stats
+      - PLANEFINDER_SHARECODE=
+    labels:
+      - "io.balena.features.supervisor-api=1"
+      - "traefik.enable=true"
+      - "traefik.http.routers.planefinder.rule=PathPrefix(`/planefinder`)"
+      - "traefik.http.routers.planefinder-a.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.planefinder-b.rule=PathPrefix(`/ajax/`)"
+      - "traefik.http.routers.planefinder-c.rule=PathPrefix(`/assets/`)"
+      - "traefik.http.routers.planefinder-d.rule=PathPrefix(`/client/`)"
+      - "traefik.http.routers.planefinder-e.rule=Path(`/map.html`)"
+      - "traefik.http.routers.planefinder-f.rule=Path(`/map3D.html`)"
+      - "traefik.http.routers.planefinder-g.rule=Path(`/data.html`)"
+      - "traefik.http.routers.planefinder-h.rule=Path(`/logs.html`)"
+      - "traefik.http.routers.planefinder-i.rule=Path(`/viz.html`)"
+      - "traefik.http.routers.planefinder-j.rule=Path(`/stats.html`)"
+      - "traefik.http.routers.planefinder-l.rule=Path(`/setup.html`)"
+      - "traefik.http.routers.planefinder.middlewares=planefinder-redirect,planefinder-stripprefix"
+      - "traefik.http.middlewares.planefinder-redirect.redirectregex.regex=^.*/planefinder$$"
+      - "traefik.http.middlewares.planefinder-redirect.redirectregex.replacement=/planefinder/"
+      - "traefik.http.middlewares.planefinder-redirect.redirectregex.permanent=true"
+      - "traefik.http.middlewares.planefinder-stripprefix.stripprefix.prefixes=/planefinder"
+
+  # 3.3 OpenSky Network
+  opensky-network:
+    depends_on:
+      - dump1090-fa
+    build: ./opensky-network
+    image: opensky-network
+    restart: unless-stopped
+    environment:
+      - OPENSKY_USERNAME=
+      - OPENSKY_SERIAL=
+    labels:
+      io.balena.features.supervisor-api: '1'
+
+  # 3.4 FlightAware (PiAware)
+  piaware:
+    depends_on:
+      - dump1090-fa
+    build: ./piaware
+    image: piaware
+    restart: unless-stopped
+    environment:
+      - FLIGHTAWARE_FEEDER_ID=
+      - DUMP978_ENABLED=false
+    labels:
+      io.balena.features.supervisor-api: '1'
+
+  # 3.5 FlightRadar24
+  fr24feed:
+    depends_on:
+      - dump1090-fa
+    build: ./fr24feed
+    image: fr24feed
+    restart: unless-stopped
+    ports:
+      - "8754:8754"
+    environment:
+      - FR24_KEY=
+    labels:
+      - "io.balena.features.supervisor-api=1"
+      - "traefik.enable=true"
+      - "traefik.http.routers.fr24feed.rule=PathPrefix(`/fr24feed`)"
+      - "traefik.http.routers.fr24feed-a.rule=Path(`/logo.png`)"
+      - "traefik.http.routers.fr24feed-b.rule=Path(`/monitor.json`)"
+      - "traefik.http.routers.fr24feed-c.rule=Path(`/settings.html`)"
+      - "traefik.http.routers.fr24feed-d.rule=Path(`/restart.html`)"
+      - "traefik.http.routers.fr24feed-e.rule=Path(`/tracked.html`)"
+      - "traefik.http.routers.fr24feed-f.rule=Path(`/fr24.css`)"
+      - "traefik.http.routers.fr24feed-g.rule=Path(`/jquery.js`)"
+      - "traefik.http.routers.fr24feed-h.rule=Path(`/flights.json`)"
+      - "traefik.http.routers.fr24feed-i.rule=Path(`/shutdown.html`)"
+      - "traefik.http.routers.fr24feed-j.rule=Path(`/logs.json`)"
+      - "traefik.http.routers.fr24feed-k.rule=Path(`/shutdown.bin`)"
+      - "traefik.http.routers.fr24feed-l.rule=Path(`/restart.bin`)"
+      - "traefik.http.routers.fr24feed-m.rule=Path(`/config.json`)"
+      - "traefik.http.routers.fr24feed.middlewares=fr24feed-redirect,fr24feed-stripprefix"
+      - "traefik.http.middlewares.fr24feed-redirect.redirectregex.regex=^.*/fr24feed$$"
+      - "traefik.http.middlewares.fr24feed-redirect.redirectregex.replacement=/fr24feed/"
+      - "traefik.http.middlewares.fr24feed-redirect.redirectregex.permanent=true"
+      - "traefik.http.middlewares.fr24feed-stripprefix.stripprefix.prefixes=/fr24feed"
+
+  # ============================================================================
+  # SECTION 4: VISUALIZATION (Local)
+  # ============================================================================
+  tar1090:
+    depends_on:
+      - dump1090-fa
+    build: ./tar1090
+    image: tar1090
+    restart: unless-stopped
+    environment:
+      - BEASTHOST=dump1090-fa
+      - LAT=60.319495
+      - LON=24.831011
+    volumes:
+      - tar1090:/var/globe_history
+      - tar1090:/var/timelapse1090
+      - tar1090:/var/lib/collectd
+      - tar1090:/var/lib/collectd/rrd
+      - tar1090:/var/log
+    ports:
+      - "8078:80"
+    labels:
+      - "io.balena.features.supervisor-api=1"
+      - "io.balena.features.procfs=1"
+      - "traefik.enable=true"
+      - "traefik.http.routers.tar1090.rule=PathPrefix(`/tar1090`)"
+      - "traefik.http.routers.tar1090-a.rule=PathPrefix(`/graphs1090`)"
