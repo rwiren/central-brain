@@ -238,7 +238,7 @@ The core logic is handled by the `spoof-detector` container. It ingests real-tim
    * **Threshold:** Flags values exceeding civilian traffic capabilities (e.g., > 1,225 km/h or [Mach 1](https://en.wikipedia.org/wiki/Mach_number)) and increments the `event_score`.
   
 
-4. **[Red Team Suite](https://github.com/rwiren/central-brain/wiki//Tools:-Red-Team-Suite)**
+4. **Simulation Tools:** [Red Team Suite](https://github.com/rwiren/central-brain/wiki//Tools:-Red-Team-Suite)
 
 ---
 
