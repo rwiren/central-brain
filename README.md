@@ -59,6 +59,8 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 
 ## 📐 System Data Flow
 
+### Simple
+
 ```mermaid
 graph LR
     %% 1. Sensing Layer
@@ -104,6 +106,107 @@ graph LR
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
 
+### More complex
+
+```mermaid
+graph LR
+    %% CLASS DEFINITIONS
+    classDef hardware fill:#eceff1,stroke:#455a64,stroke-width:2px;
+    classDef logic fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef database fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+    classDef alert fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef dashboard fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef external fill:#f3e5f5,stroke:#7b1fa2,stroke-dasharray: 5 5;
+
+    %% 1. SENSING LAYER (Remote Node)
+    subgraph NODE1 ["Node 1: RPi4 Sensor"]
+        %% RF PATH
+        ANT(Antenna) --> SDR[RTL-SDR]
+        SDR --> FEEDER[Readsb Feeder]
+        
+        %% TIMING/LOCATION PATH
+        GPS[GNSS / RTK PPS] -->|Location and Time Sync| FEEDER
+        
+        %% MONITORING
+        TELE[Telegraf Agent]
+    end
+
+    %% 2. INTELLIGENCE LAYER (Central Brain)
+    subgraph NODE2 ["Node 2: Central Brain (RPi5)"]
+        AGG[Readsb Aggregator]
+        
+        %% Data Ingestion Services
+        subgraph INGEST [Ingestion Services]
+            ADSB_W[ADSB-Feeders   and OpenSky Poller]
+            FR24[FR24 Poller]
+        end
+
+        %% Database
+        DB[(InfluxDB)]
+
+        %% Logic Engines
+        subgraph LOGIC [Logic Engines]
+            RUNWAY[Runway Tracker]
+            
+            subgraph SPOOF_CONT [Spoof Detector]
+                WD[Watchdog Script]
+            end
+        end
+
+        MQTT[MQTT Broker]
+    end
+
+    %% 3. EXTERNAL WORLD
+    subgraph EXT [External Sources]
+        API_FR24[FlightRadar24]
+        API_OS[OpenSky Network]
+    end
+
+    subgraph REDTEAM [Red Team Tools]
+        SIM[Spoof Simulator]
+    end
+
+    %% 4. VISUALIZATION
+    GRAF[Grafana Dashboard]
+
+    %% CONNECTIONS ==============================
+
+    %% Hardware Flow (Left to Right)
+    ANT:::hardware --> SDR:::hardware
+    FEEDER:::hardware -->|TCP Stream| AGG:::logic
+    TELE:::hardware -->|Health Metrics| DB:::database
+
+    %% Aggregator Splits
+    AGG -->|JSON| RUNWAY:::logic
+    AGG -->|JSON Local Data| ADSB_W:::logic
+
+    %% Ingestion Flow
+    API_FR24:::external -->|HTTPS| FR24:::logic
+    API_OS:::external -->|HTTPS| ADSB_W
+    
+    FR24 -->|Write Reference| DB
+    ADSB_W -->|Write Data| DB
+    RUNWAY -->|Write Events| DB
+
+    %% Logic Flow
+    DB <-->|Read Local vs Truth| WD:::logic
+    WD -->|Write Drift Data| DB
+    WD -->|Publish Alert| MQTT:::alert
+
+    %% Red Team Injection
+    SIM:::alert -->|Inject Fake Data| DB
+
+    %% Dashboarding
+    DB --> GRAF:::dashboard
+
+    %% Apply Styles
+    class ANT,SDR,FEEDER,TELE,GPS hardware;
+    class AGG,ADSB_W,FR24,RUNWAY,WD,SPOOF_CONT logic;
+    class DB database;
+    class MQTT,SIM alert;
+    class GRAF dashboard;
+    class API_FR24,API_OS external;
+```
 ---
 
 ## 🛡️ Security Modules (Watchdog 2.0)
