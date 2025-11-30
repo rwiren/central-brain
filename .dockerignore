@@ -1,0 +1,7 @@
+sensor-node-rpi4/
+influxdb-data/
+grafana-data/
+mosquitto-data/
+readsb-data/
+.git/
+.DS_Store

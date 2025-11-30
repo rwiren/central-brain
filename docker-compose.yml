@@ -98,7 +98,6 @@ services:
     environment:
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
       - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
-      # CHANGED: Use LAN IP (192.168.1.134) instead of 127.0.0.1 for Mac compatibility
       - MQTT_BROKER=192.168.1.134 
       - MQTT_PORT=1883
       - LOCAL_READSB_URL=http://192.168.1.152:8080/data/aircraft.json 
@@ -121,6 +120,24 @@ services:
       - DEVICE_NAME=Central-Brain
 
   # ============================================================================
+  # 8. PHYSICS GUARD (Kinematic Integrity)
+  # ============================================================================
+  physics-guard:
+    build: ./physics-guard
+    restart: always
+    network_mode: host
+    depends_on:
+      - influxdb
+      - mqtt
+    environment:
+      - INFLUX_HOST=192.168.1.134
+      - INFLUX_PORT=8086
+      - INFLUX_DB=readsb
+      - MQTT_BROKER=192.168.1.134
+      - MQTT_PORT=1883
+      - GRAFANA_HOST=192.168.1.134
+
+  # ============================================================================
   # 9. RUNWAY TRACKER (EFHK Operations)
   # ============================================================================
   runway-tracker:
@@ -136,7 +153,6 @@ services:
       - INFLUX_DB=readsb
       - SDR_HOST=127.0.0.1
       - SDR_PORT=8080
-      # CHANGED: Use LAN IP for MQTT
       - MQTT_BROKER=192.168.1.134 
       - TARGET_AIRPORT=EFHK
       - GAZETTEER_URL=http://192.168.1.134:3000/public/gazetteer/airports.geojson
