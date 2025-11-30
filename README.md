@@ -13,28 +13,29 @@
 ---
 
 ### 📋 Table of Contents
-- [Project Overview](#-project-overview)
-- [Hardware Architecture](#-hardware-architecture)
-- [System Data Flow](#-system-data-flow)
-- [Security Modules](#-security-modules-watchdog-20)
-- [Data Schema (InfluxDB)](#-data-schema-influxdb)
-- [Grafana Dashboards](#-grafana-dashboards)
+- [Project Overview](#project-overview)
+- [Hardware Architecture](#hardware-architecture)
+- [System Data Flow](#system-data-flow)
+- [Security Modules](#security-modules)
+- [Data Schema (InfluxDB)](#data-schema)
+- [Grafana Dashboards](#grafana-dashboards)
 - [MLAT / TDoA Verification](#mlat)
-- [Receiver Coverage](#-receiver-coverage)
+- [Receiver Coverage](#receiver-coverage)
+- [Global Validation](#global-validation)
 - [Repository Structure](#structure)
 - [Acknowledgements & References](#acknowledgements)
-- [Deployment](#-deployment)
+- [Deployment](#deployment)
 
 ---
 
-## 📖 Project Overview
+## <a name="project-overview"></a>📖 Project Overview
 **Business Problem:** Unencrypted ADS-B signals are vulnerable to spoofing, creating "ghost flights" and polluting data streams used for air traffic monitoring and critical safety systems.
 
 **Goal:** Detect flight anomalies in real-time by comparing local RF data against global reference networks (OpenSky) and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
 
 ---
 
-## 🔭 Hardware Architecture
+## <a name="hardware-architecture"></a>🔭 Hardware Architecture
 This project uses a distributed **"Sensor & Brain"** topology to isolate sensitive RF reception from heavy AI processing.
 
 ### 📡 Node 1: The Sensor (and "The Anchor") (RPi 4)
@@ -57,7 +58,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
   
 ---
 
-## 📐 System Data Flow
+## <a name="system-data-flow"></a>📐 System Data Flow
 
 ### Simple diagram
 [View simple diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_simple_diagram.png)
@@ -238,7 +239,7 @@ The core processing unit for data fusion and analysis.
 
 ---
 
-## 🛡️ Security Modules (Watchdog 2.0)
+## <a name="security-modules"></a>🛡️ Security Modules (Watchdog 2.0)
 
 The core logic is handled by the `spoof-detector` container. It ingests real-time data from `adsb-feeders`, performs cross-verification in parallel threads, and writes the results to the `integrity_check` and `flight_ops` measurements.
 
@@ -263,7 +264,7 @@ The core logic is handled by the `spoof-detector` container. It ingests real-tim
 
 ---
 
-## 📘 Data Schema (InfluxDB)
+## <a name="data-schema"></a>📘 Data Schema (InfluxDB)
 
 The system stores real-time flight telemetry in the `readsb` database. While the full schema handles over 30 distinct data points, we focus on two primary categories for detection: **Integrity** and **Performance**.
 
@@ -297,7 +298,7 @@ For the complete data dictionary, including **Unit Conversions** (Knots vs m/s),
 
 ---
 
-### <a name="-grafana-dashboards"></a>📊 Grafana Dashboards
+## <a name="grafana-dashboards"></a>📊 Grafana Dashboards
 
 Visualization of real-time flight telemetry, spoofing alerts, and system health.
 
@@ -310,7 +311,7 @@ Visualization of real-time flight telemetry, spoofing alerts, and system health.
 * **Drift Analysis:** *(In Progress)* Plotting the delta between `local_aircraft_state` and `global_truth` (OpenSky) over time.
 
 ---
-### <a name="mlat"></a>📡 MLAT / TDoA Verification (The "Lie Detector")
+## <a name="mlat"></a>📡 MLAT / TDoA Verification (The "Lie Detector")
 **Status:** 🚧 In Development | **Goal:** Spoofing Detection
 
 We are implementing a **Multilateration (MLAT)** engine to act as a physics-based "Truth Source" alongside OpenSky data.
@@ -327,7 +328,7 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 
 ---
 
-## 🗺️ Receiver Coverage
+## <a name="receiver-coverage"></a>🗺️ Receiver Coverage
 
 [![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/coverage-map-2025-11-30.png)](assets/coverage-map-2025-11-30.png?raw=true)
 
@@ -337,7 +338,7 @@ The shaded area represents the theoretical maximum distance the receiver should 
 
 ---
 
-### 🌐 Global Validation
+## <a name="global-validation"></a>🌐 Global Validation
 This sensor node contributes data to global networks, allowing us to validate our local findings against community data.
 
 | Network | Station ID | Status |
@@ -378,6 +379,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ---
 
 ## <a name="acknowledgements"></a>📚 Acknowledgements & References
+
 * **Base Infrastructure:** [balena-ads-b](https://hub.balena.io/apps/1829313/balena-ads-b)
 * **Data Validation:** [OpenSky Network Config](https://www.opensky-network.org/data/api)
 * **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
@@ -385,7 +387,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ---
 
-## 🛠 Deployment
+## <a name="deployment"></a>🛠 Deployment
 
 1.  **Set Environment Variables (.env file and Balena Dashboard):** You must define these variables for the deployment process.
     * **Variables:** `LAT`, `LON`, `INFLUX_USER`, `INFLUX_PASSWORD`, `GRAFANA_PASSWORD`, `FR24_API_TOKEN`
