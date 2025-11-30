@@ -237,7 +237,8 @@ The core logic is handled by the `spoof-detector` container. It ingests real-tim
    * **Logic:** Monitors `gs_knots` and `v_rate_fpm` in `local_aircraft_state` for impossible kinematics.
    * **Threshold:** Flags values exceeding civilian traffic capabilities (e.g., > 1,225 km/h or [Mach 1](https://en.wikipedia.org/wiki/Mach_number)) and increments the `event_score`.
   
-   * **[Red Team Suite](https://github.com/rwiren/central-brain/wiki//Tools:-Red-Team-Suite)**
+
+4. **[Red Team Suite](https://github.com/rwiren/central-brain/wiki//Tools:-Red-Team-Suite)**
 
 ---
 
