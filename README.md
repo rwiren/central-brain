@@ -354,7 +354,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 ├── RELEASENOTES.md            # Release history and versioning
 ├── README.md                  # Project documentation & quick start
 ├── docker-compose.yml         # Main orchestration stack (Central Brain / RPi5)
-├── adsb-feeders/              # Ingestion Pipelines (Local Readsb -> InfluxDB)
+├── adsb-feeders/              # Ingestion Pipelines (OpneSky and Local Readsb -> InfluxDB)
 ├── fr24-poller/               # External Truth Feed (FlightRadar24 -> InfluxDB)
 ├── spoof-detector/            # CORE Logic: GPS Integrity Analysis (Watchdog)
 ├── physics-guard/             # CORE Logic: Kinematic Integrity (Mach/VSI Checks)
