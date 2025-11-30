@@ -1,4 +1,4 @@
-# Release Notes
+# Release Notes - v0.9.1-beta (Central Brain)
 
 ## v0.9.1-beta (The "Red Team" Release)
 **Date:** 2025-11-30
