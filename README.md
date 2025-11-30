@@ -351,26 +351,23 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ```text
 .
-├── DATA_DICTIONARY.md         # Deprecated (See Wiki for active schema)
-├── LICENSE
+├── RELEASENOTES.md            # Release history and versioning
 ├── README.md                  # Project documentation & quick start
-├── docker-compose.yml         # Main orchestration stack
-├── adsb-feeders/              # Ingestion Pipelines (Local & OpenSky -> InfluxDB)
-│   ├── Dockerfile
-│   ├── opensky_feeder.py
-│   ├── readsb_feeder.py
-│   └── readsb_position_feeder.py
-├── spoof-detector/            # CORE: Watchdog 2.0 (Main Security Analyzer)
-│   ├── Dockerfile
-│   └── watchdog.py
-├── tools/                     # Utilities & Planning
-│   ├── mlat_solver.py         # Core-4 Math Engine (Physics Solver)
-│   ├── mlat_planner.ipynb     # Interactive Colab Notebook (for Wiki)
-│   ├── mlat_planner.py        # Local Python script for visualization
-│   └── generate_notebook.py   # Helper to build the notebook
-├── assets/                    # Documentation images & MLAT diagrams
-├── physics-guard/             # [Legacy] Original logic (integrated into spoof-detector)
-└── runway-tracker/            # [Legacy] Original logic (integrated into spoof-detector)
+├── docker-compose.yml         # Main orchestration stack (Central Brain / RPi5)
+├── adsb-feeders/              # Ingestion Pipelines (Local Readsb -> InfluxDB)
+├── fr24-poller/               # External Truth Feed (FlightRadar24 -> InfluxDB)
+├── spoof-detector/            # CORE Logic: GPS Integrity Analysis (Watchdog)
+├── physics-guard/             # CORE Logic: Kinematic Integrity (Mach/VSI Checks)
+├── runway-tracker/            # CORE Logic: Airport Operations (EFHK FIDS)
+├── sensor-node-rpi4/          # Reference code for remote Sensing Nodes
+│   ├── dump1090-fa/           # SDR Logic
+│   ├── telegraf-agent/        # Health telemetry pusher
+│   └── ...                    # Various feeder clients
+├── tools/                     # Red Team Suite & Planning Utilities
+│   ├── spoof_simulator.py     # GPS Injection Attack Tool
+│   ├── physics_test.py        # Hypersonic Kinematics Test Tool
+│   └── mlat_solver.py         # Multilateration Math Engine
+└── assets/                    # Dashboard screenshots & Architecture diagrams
 ```
 
 ---
