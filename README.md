@@ -59,7 +59,7 @@ This project uses a distributed **"Sensor & Brain"** topology to isolate sensiti
 
 ## 📐 System Data Flow
 
-### Simple
+### Simple diagram
 
 ```mermaid
 graph LR
@@ -106,7 +106,7 @@ graph LR
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
 
-### More complex
+### More complex diagram
 
 ```mermaid
 graph LR
