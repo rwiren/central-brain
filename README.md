@@ -214,7 +214,7 @@ graph LR
     class API_FR24,API_OS external;
 ```
 
-This diagram illustrates the data lifecycle within the **Central Brain** ecosystem, detailing how raw RF signals are transformed into actionable security intelligence across a distributed multi-node architecture.
+This diagram illustrates the data lifecycle within the ecosystem, detailing how raw RF signals are transformed into actionable security intelligence across a distributed multi-node architecture.
 
 **1. The Sensing Layer (Node 1: RPi4 Sensor)**
 The remote physical interface responsible for signal acquisition.
