@@ -329,11 +329,13 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 
 ## 🗺️ Receiver Coverage
 
-![Receiver Coverage Map](assets/coverage-map.jpg)
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/coverage-map-2025-11-30.png)](assets/coverage-map-2025-11-30.png?raw=true)
 
-*Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846)*
+*Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
-The dotted lines represent the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet taking into account obstructions from terrain.
+The shaded area represents the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet, taking terrain obstructions into account.
+
+---
 
 ### 🌐 Global Validation
 This sensor node contributes data to global networks, allowing us to validate our local findings against community data.
