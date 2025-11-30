@@ -110,7 +110,7 @@ graph LR
 
 
 ### More complex diagram
-[View more complex diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_complex_diagram.png)
+[View more complex diagram](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/mermaid_complex_diagram-2.png)
 
 ```mermaid
 graph LR
@@ -124,19 +124,14 @@ graph LR
 
     %% 1. SENSING LAYER (Remote Node)
     subgraph NODE1 ["Node 1: RPi4 Sensor"]
-        %% RF PATH
         ANT(Antenna) --> SDR[RTL-SDR]
         SDR --> FEEDER[Readsb Feeder]
-        
-        %% TIMING/LOCATION PATH
-        GPS[GNSS / RTK PPS] -->|Location and Time Sync| FEEDER
-        
-        %% MONITORING
+        GPS[GNSS / RTK / PPS] -->|Location and Time Sync| FEEDER
         TELE[Telegraf Agent]
     end
 
     %% 2. INTELLIGENCE LAYER (Central Brain)
-    subgraph NODE2 ["Node 2: Central Brain (RPi5)"]
+    subgraph NODE2 ["Node 2: RPI5 Central Brain"]
         AGG[Readsb Aggregator]
         
         %% Data Ingestion Services
@@ -151,6 +146,7 @@ graph LR
         %% Logic Engines
         subgraph LOGIC [Logic Engines]
             RUNWAY[Runway Tracker]
+            PHYS[Physics Guard]
             
             subgraph SPOOF_CONT [Spoof Detector]
                 WD[Watchdog Script]
@@ -175,27 +171,33 @@ graph LR
 
     %% CONNECTIONS ==============================
 
-    %% Hardware Flow (Left to Right)
+    %% Hardware Flow
     ANT:::hardware --> SDR:::hardware
     FEEDER:::hardware -->|TCP Stream| AGG:::logic
     TELE:::hardware -->|Health Metrics| DB:::database
 
-    %% Aggregator Splits
-    AGG -->|JSON| RUNWAY:::logic
+    %% Aggregator Splits (JSON Feed)
+    AGG --> RUNWAY:::logic
+    AGG --> PHYS:::logic
     AGG -->|JSON Local Data| ADSB_W:::logic
 
     %% Ingestion Flow
     API_FR24:::external -->|HTTPS| FR24:::logic
     API_OS:::external -->|HTTPS| ADSB_W
     
-    FR24 -->|Write Reference| DB
-    ADSB_W -->|Write Data| DB
+    FR24 -->|Write Reference Data| DB
+    ADSB_W -->|Write Local & Global Data| DB
     RUNWAY -->|Write Events| DB
 
     %% Logic Flow
-    DB <-->|Read Local vs Truth| WD:::logic
+    DB <-->|Read Local vs Reference| WD:::logic
     WD -->|Write Drift Data| DB
     WD -->|Publish Alert| MQTT:::alert
+    
+    %% Physics Guard Actions
+    PHYS -->|Publish Alert| MQTT
+    %% ADDED CONNECTION TO DB
+    PHYS -->|Write Metrics| DB
 
     %% Red Team Injection
     SIM:::alert -->|Inject Fake Data| DB
@@ -205,7 +207,7 @@ graph LR
 
     %% Apply Styles
     class ANT,SDR,FEEDER,TELE,GPS hardware;
-    class AGG,ADSB_W,FR24,RUNWAY,WD,SPOOF_CONT logic;
+    class AGG,ADSB_W,FR24,RUNWAY,WD,SPOOF_CONT,PHYS logic;
     class DB database;
     class MQTT,SIM alert;
     class GRAF dashboard;
