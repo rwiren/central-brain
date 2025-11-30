@@ -105,7 +105,7 @@ graph LR
     style DASH fill:#e8f5e9,stroke:#2e7d32
     style LOGIC fill:#ffffff,stroke:#333,stroke-dasharray: 2 2
 ```
-![View Simple Diagram](https://github.com/rwiren/central-brain/blob/main/assets/mermaid_simple_diagram.png)
+[View Diagram](https://github.com/rwiren/central-brain/blob/main/assets/mermaid_simple_diagram.png)
 
 
 ### More complex diagram 
@@ -209,7 +209,7 @@ graph LR
     class GRAF dashboard;
     class API_FR24,API_OS external;
 ```
-![View Complex Diagram](https://github.com/rwiren/central-brain/blob/main/assets/mermaid_complex_diagram.png)
+[View Diagram](https://github.com/rwiren/central-brain/blob/main/assets/mermaid_complex_diagram.png)
 
 ---
 
