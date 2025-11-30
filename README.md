@@ -214,6 +214,27 @@ graph LR
     class API_FR24,API_OS external;
 ```
 
+This diagram illustrates the data lifecycle within the **Central Brain** ecosystem, detailing how raw RF signals are transformed into actionable security intelligence across a distributed multi-node architecture.
+
+**1. The Sensing Layer (Node 1: RPi4 Sensor)**
+The remote physical interface responsible for signal acquisition.
+* **Signal Path:** Captures 1090MHz signals via Antenna/RTL-SDR and decodes them into structured aircraft messages (`Readsb Feeder`).
+* **Precision Timing:** Utilizes a **GNSS / RTK** module for high-precision PPS (Pulse Per Second) timing, essential for multilateration.
+* **Health:** A `Telegraf Agent` sidecar pushes hardware telemetry (CPU/Temp) downstream.
+
+**2. The Central Brain (Node 2: RPi5 Server)**
+The core processing unit for data fusion and analysis.
+* **Ingestion:** Aggregates raw TCP streams from sensors and enriches them with global "Truth Data" fetched from **FlightRadar24** and **OpenSky Network**.
+* **Data Lake (InfluxDB):** The central hub storing all local positions, global references, system health, and alerts for real-time querying.
+* **Logic Engines:** Independent microservices analyzing the stream:
+    * **Physics Guard:** Flags impossible maneuvers (e.g., Mach > 0.95).
+    * **Runway Tracker:** Geofences aircraft to detect landing/takeoff events.
+    * **Spoof Detector:** Compares *Local* vs. *Truth* data; triggers alerts if drift > 2km.
+
+**3. The Action Layer**
+* **Output:** **Grafana** renders the [Command Dashboard](https://github.com/rwiren/central-brain/wiki/System-Visualization-&-Logic-Architecture) while critical alerts are published to **MQTT**.
+* **Red Team:** The **Spoof Simulator** validates defense logic by injecting synthetic attack vectors into the datastore.
+
 
 ---
 
