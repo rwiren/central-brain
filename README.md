@@ -339,7 +339,8 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 
 ## <a name="receiver-coverage"></a>🗺️ Receiver Coverage
 
-[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/coverage-map-2025-11-30.png)](assets/coverage-map-2025-11-30.png?raw=true)
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/coverage-map-2025-11-30.png)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png?raw=true)
+
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
