@@ -1,5 +1,29 @@
 # Release Notes
 
+## v1.4.0 (Runway Intelligence Upgrade)
+**Date:** 2025-12-01
+**Status:** Production / Stable
+
+### 🏆 Milestone Achievement
+This release marks the transition to a fully autonomous Air Traffic Intelligence system. The **Runway Tracker** now operates with "Human-Like" logic, distinguishing between landing, takeoff, taxiing, and 
+aborted maneuvers using physics-based filtering.
+
+### 🚀 Core Features
+* **Runway Tracker v2.7.2:**
+    * **Vector Logic:** Automatically assigns Runway IDs (15, 22, 04, 33) based on aircraft magnetic heading.
+    * **Ground Clamp:** Physics filter that prevents false "Landing" alerts for aircraft taxiing at < 60kts.
+    * **Global Data Fusion:** "Deep Search" capability looks back 15 minutes in local and global databases to recover missing Squawk codes and Callsigns.
+* **Dynamic Configuration:** Airport geometry is now fetched dynamically from the local `airports.geojson` gazetteer.
+
+### 🐛 Bug Fixes
+* **Data Sanitization:** Fixed `NoneType` crashes caused by partial ADS-B packets.
+* **Tag Awareness:** Solved database query mismatches between Tags (Indexed) and Fields (Data), ensuring Callsigns appear correctly in tables.
+
+---
+
+
+# Release Notes
+
 ## v1.4.0 (The Runway Intelligence Update)
 **Date:** 2025-12-01
 **Status:** Stable / Production
