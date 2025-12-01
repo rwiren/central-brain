@@ -1,4 +1,3 @@
-requests
 influxdb
+requests
 geopy
-paho-mqtt>=2.0.0

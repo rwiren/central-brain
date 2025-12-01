@@ -1,5 +1,26 @@
 # Release Notes
 
+## v1.4.0 (The Runway Intelligence Update)
+**Date:** 2025-12-01
+**Status:** Stable / Production
+
+### 🚀 New Features
+* **Runway Tracker v2.0:** Complete rewrite of the tracking engine.
+    * **Database-Driven:** Now queries InfluxDB directly instead of polling HTTP (eliminates networking sync issues).
+    * **Calculated Physics:** Automatically calculates Vertical Speed (VSI) based on altitude history if the aircraft transponder reports 0 (fixes "Invisible Landing" bug).
+    * **Taxiing Detection:** Now detects and logs aircraft moving on the ground (5-40 kts).
+    * **Vector Logic:** Uses aircraft heading to determine specific runways (15 vs 22R).
+* **Runway Simulator:** Added `tools/runway_test.py` to inject synthetic landing events for dashboard testing.
+
+### 🐛 Bug Fixes
+* **Null-Safety:** Fixed critical crash loop in `runway-tracker` when receiving partial ADS-B frames.
+* **Dependencies:** Added `geopy` to runway-tracker requirements.
+
+---
+
+
+# Release Notes
+
 ## v1.3.0 (The "Red Team" Release)
 **Date:** 2025-11-30
 **Status:** Stable / Production
