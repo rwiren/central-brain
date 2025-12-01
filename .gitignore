@@ -32,3 +32,10 @@ readsb-data/
 # --- IDEs ---
 .vscode/
 .idea/
+
+# --- Internal / Proprietary ---
+# Prevent accidental commit of internal planning tools
+isac*
+jorvas*
+*_internal.py
+internal/
