@@ -298,14 +298,6 @@ For the complete dictionary, including **Unit Conversions** (Knots vs m/s), **Ta
 
 ---
 
-📚 **Full Documentation on Wiki**
-
-For the complete data dictionary, including **Unit Conversions** (Knots vs m/s), **Data Types**, and **Sample InfluxQL Queries**, check the Wiki:
-
-**👉 [View the Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
-
----
-
 ## <a name="grafana-dashboards"></a>📊 Grafana Dashboards
 
 Visualization of real-time flight telemetry, spoofing alerts, and system health.
