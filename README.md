@@ -266,27 +266,35 @@ The core logic is handled by the `spoof-detector` container. It ingests real-tim
 
 ## <a name="data-schema"></a>📘 Data Schema (InfluxDB)
 
-The system stores real-time flight telemetry in the `readsb` database. While the full schema handles over 30 distinct data points, we focus on two primary categories for detection: **Integrity** and **Performance**.
+The system stores real-time flight telemetry in the `readsb` database. While the full schema contains over 40 distinct data points, we focus on **three primary domains** for security and anomaly detection.
 
 ### 🗝️ Key Metrics Snapshot
 
-**1. The "Hunter" Metrics (Security)**
+**1. The "Hunter" Metrics (Security & Physics)**
 *Used to detect anomalies, spoofing, and impossible flight maneuvers.*
 
-| Measurement | Key Field | Description |
+| Measurement | Key Field | Detection Logic |
 | :--- | :--- | :--- |
-| `integrity_check` | **`is_spoofed`** | Binary Alert (`1` = Spoofed). Triggered when `lat_error` > 2.0km. |
-| `integrity_check` | `lat_error` | The calculated distance (km) between the local signal and global truth. |
-| `flight_ops` | **`event_score`** | Risk accumulator. Increases when physics rules (Mach 1, Vertical Rate) are broken. |
+| `gps_drift` | **`drift_km`** | **Spoofing.** Tracks the spatial delta between Local RF and Global Truth. Spikes > 2.0km trigger a critical alert. |
+| `physics_alerts` | **`value`** | **Kinematics.** Flags aerodynamic violations (e.g., Speed > Mach 0.95) typical of synthetic signal injection. |
+| `runway_events` | **`event`** | **Operations.** Categorizes intent (Landing vs Taxiing). Used to detect **Aborted Takeoffs** (High-speed rejects). |
 
-**2. The "Sensor" Metrics (Hardware)**
-*Used to monitor the health of the RTL-SDR receiver.*
+**2. The "Sensor" Metrics (RF & Hardware)**
+*Used to monitor the health of the electromagnetic environment.*
 
-| Measurement | Key Field | Description |
+| Measurement | Key Field | Detection Logic |
 | :--- | :--- | :--- |
-| `local_performance` | **`signal_db`** | Signal Strength (RSSI). Monitor this for antenna degradation or jamming. |
-| `local_performance` | `strong_signals` | Count of signals saturating the receiver (Gain too high). |
-| `local_performance` | `messages` | Total message rate (Traffic volume). |
+| `local_performance` | **`signal_db`** | **Signal Health.** Monitors RSSI. Sudden drops can indicate antenna tampering or jamming. |
+| `local_performance` | `strong_signals` | **Saturation.** Count of signals exceeding receiver linearity (Gain too high or nearby jammer). |
+| `gps_data` | **`uSat`** | **GNSS Integrity.** Satellite lock count. A drop to 0 indicates hardware failure or active GPS jamming. |
+
+---
+
+📚 **Full Documentation on Wiki**
+
+For the complete dictionary, including **Unit Conversions** (Knots vs m/s), **Tag Definitions**, and **Sample InfluxQL Queries**, check the Wiki:
+
+**👉 [View the Data Schema Reference](https://github.com/rwiren/central-brain/wiki/Data-Schema)**
 
 ---
 
