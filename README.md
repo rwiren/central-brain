@@ -266,7 +266,7 @@ The core logic is handled by the `spoof-detector` container. It ingests real-tim
 
 ## <a name="data-schema"></a>📘 Data Schema (InfluxDB)
 
-The system stores real-time flight telemetry in the `readsb` database. While the full schema contains over 40 distinct data points, we focus on **three primary domains** for security and anomaly detection.
+The system stores real-time flight telemetry in the `readsb` database. While the full schema contains over 40 distinct data points, we focus on **three primary domains** for security, performance, and health.
 
 ### 🗝️ Key Metrics Snapshot
 
@@ -279,14 +279,23 @@ The system stores real-time flight telemetry in the `readsb` database. While the
 | `physics_alerts` | **`value`** | **Kinematics.** Flags aerodynamic violations (e.g., Speed > Mach 0.95) typical of synthetic signal injection. |
 | `runway_events` | **`event`** | **Operations.** Categorizes intent (Landing vs Taxiing). Used to detect **Aborted Takeoffs** (High-speed rejects). |
 
-**2. The "Sensor" Metrics (RF & Hardware)**
-*Used to monitor the health of the electromagnetic environment.*
+**2. The "Sensor" Metrics (RF Environment)**
+*Used to monitor the quality of the radio spectrum and receiver gain.*
 
 | Measurement | Key Field | Detection Logic |
 | :--- | :--- | :--- |
 | `local_performance` | **`signal_db`** | **Signal Health.** Monitors RSSI. Sudden drops can indicate antenna tampering or jamming. |
 | `local_performance` | `strong_signals` | **Saturation.** Count of signals exceeding receiver linearity (Gain too high or nearby jammer). |
 | `gps_data` | **`uSat`** | **GNSS Integrity.** Satellite lock count. A drop to 0 indicates hardware failure or active GPS jamming. |
+
+**3. The "Device" Metrics (Infrastructure)**
+*Used to ensure the distributed nodes are alive and healthy.*
+
+| Measurement | Key Field | Description |
+| :--- | :--- | :--- |
+| `system_stats` | **`cpu_temp`** | **Thermal.** Monitors RPi5/RPi4 core temps to prevent thermal throttling during heavy MLAT calculations. |
+| `disk` | `used_percent` | **Storage.** Alerts if log rotation fails and fills the partition. |
+| `system_stats` | `uptime` | **Stability.** Tracks time since last reboot or crash. |
 
 ---
 
