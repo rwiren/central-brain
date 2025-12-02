@@ -1,4 +1,7 @@
+cat > docker-compose.yml << 'EOF'
 version: '2.4'
+# REVISION: 2.0.1 (2025-12-02)
+# Added gps-logger (v1.3.1) and cleaned Telegraf.
 
 volumes:
   settings:
@@ -6,12 +9,6 @@ volumes:
   tar1090:
 
 services:
-  # ============================================================================
-  # SECTION 1: GPS & TELEMETRY CHAIN
-  # Data Flow: USB GPS -> Splitter -> GPSD -> Telegraf -> RPi5 InfluxDB
-  # ============================================================================
-  
-  # 1.1 USB Splitter (Handles Raw Hardware)
   splitter:
     build: ./splitter
     restart: always
@@ -29,7 +26,6 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 1.2 GPS Daemon (Decodes Raw GPS for Linux)
   gpsd:
     build: ./gpsd
     restart: always
@@ -48,7 +44,18 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 1.3 Telegraf Agent (Sends GPS Integrity Data to RPi5)
+  gps-logger:
+    build: ./gps-logger
+    restart: always
+    depends_on:
+      - gpsd
+    environment:
+      - GPSD_HOST=gpsd
+      - GPSD_PORT=2947
+      - INFLUX_URL=http://192.168.1.134:8086
+      - INFLUX_DB=readsb
+      - TAG_HOST=rpi4-adsb
+
   telegraf:
     build: ./telegraf-agent
     restart: always
@@ -58,23 +65,18 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 1.4 System Observer (Monitors CPU/RAM/Temp -> Sends to RPi5)
   system-observer:
     build: ./system-observer
     privileged: true
     restart: always
     network_mode: host
     environment:
-      # Target: Central Brain (RPi5) IP
       - INFLUX_HOST=192.168.1.134
       - INFLUX_DB=readsb
       - DEVICE_NAME=RPi4-Sensor
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # ============================================================================
-  # SECTION 2: SDR & DECODER (The "Beast")
-  # ============================================================================
   dump1090-fa:
     build: ./dump1090-fa
     image: dump1090-fa
@@ -86,9 +88,7 @@ services:
     devices:
       - "/dev/bus/usb"
     expose:
-      # Beast Output (Used by Feeders)
       - "30005"
-      # BaseStation Output
       - "30003"
     ports:
       - "30003:30003"
@@ -97,7 +97,6 @@ services:
     labels:
       - "io.balena.features.supervisor-api=1"
       - "traefik.enable=true"
-      # Routing for SkyAware Web UI
       - "traefik.http.routers.skyaware.rule=PathPrefix(`/skyaware`)"
       - "traefik.http.middlewares.skyaware-redirect.redirectregex.regex=^.*/skyaware$$"
       - "traefik.http.middlewares.skyaware-redirect.redirectregex.replacement=/skyaware/"
@@ -107,11 +106,6 @@ services:
       - "traefik.http.middlewares.dump1090-fa-redirect.redirectregex.replacement=/skyaware/"
       - "traefik.http.middlewares.dump1090-fa-redirect.redirectregex.permanent=true"
 
-  # ============================================================================
-  # SECTION 3: ADS-B FEEDERS
-  # ============================================================================
-  
-  # 3.1 AirNav RadarBox
   airnav-radar:
     depends_on:
       - dump1090-fa
@@ -131,7 +125,6 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 3.2 Planefinder (FIXED)
   planefinder:
     depends_on:
       - dump1090-fa
@@ -141,11 +134,9 @@ services:
     ports:
       - "30053:30053"
     environment:
-      # Critical: Tells Planefinder where to get data
       - BEASTHOST=dump1090-fa
       - LAT=60.3195
       - LON=24.8310
-      # Add your sharecode here to restore stats
       - PLANEFINDER_SHARECODE=
     labels:
       - "io.balena.features.supervisor-api=1"
@@ -168,7 +159,6 @@ services:
       - "traefik.http.middlewares.planefinder-redirect.redirectregex.permanent=true"
       - "traefik.http.middlewares.planefinder-stripprefix.stripprefix.prefixes=/planefinder"
 
-  # 3.3 OpenSky Network
   opensky-network:
     depends_on:
       - dump1090-fa
@@ -181,7 +171,6 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 3.4 FlightAware (PiAware)
   piaware:
     depends_on:
       - dump1090-fa
@@ -194,7 +183,6 @@ services:
     labels:
       io.balena.features.supervisor-api: '1'
 
-  # 3.5 FlightRadar24
   fr24feed:
     depends_on:
       - dump1090-fa
@@ -228,9 +216,6 @@ services:
       - "traefik.http.middlewares.fr24feed-redirect.redirectregex.permanent=true"
       - "traefik.http.middlewares.fr24feed-stripprefix.stripprefix.prefixes=/fr24feed"
 
-  # ============================================================================
-  # SECTION 4: VISUALIZATION (Local)
-  # ============================================================================
   tar1090:
     depends_on:
       - dump1090-fa
@@ -255,3 +240,4 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.tar1090.rule=PathPrefix(`/tar1090`)"
       - "traefik.http.routers.tar1090-a.rule=PathPrefix(`/graphs1090`)"
+EOF
