@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-# ==============================================================================
-# CENTRAL BRAIN AI TRAINER v2.0.0
-# ==============================================================================
-# Author:      RW / Central Brain Project
-# Description: Trains LSTM (Trajectory) and Autoencoder (Anomaly) models
-#              using the latest flight telemetry dataset.
-#              Optimized for Apple Silicon (M-series) GPU acceleration.
-# ==============================================================================
-
 import pandas as pd
 import numpy as np
 import joblib
@@ -20,134 +11,91 @@ from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import LSTM, Dense, Input, RepeatVector, TimeDistributed
 from tensorflow.keras.callbacks import EarlyStopping
 
-__version__ = "2.0.0"
+# === PATH CONFIGURATION ===
+# Get path to 'ai-research' folder (parent of 'src')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DATASET_DIR = os.path.join(PROJECT_ROOT, "datasets")
+MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 
-# ==========================================
-# ⚙️ CONFIGURATION
-# ==========================================
-DATASET_DIR = "datasets"
-MODEL_DIR = "models"
-SEQ_LEN = 10  # Lookback window (10 seconds)
-EPOCHS = 20   # Training cycles (Increase for better accuracy)
-BATCH_SIZE = 256 # Increased for M4 Max (Faster training)
+SEQ_LEN = 10
+EPOCHS = 20
+BATCH_SIZE = 256
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 def get_latest_dataset():
-    """Finds the most recent CSV file in the datasets folder."""
     files = glob.glob(f"{DATASET_DIR}/*.csv")
-    if not files:
-        return None
+    if not files: return None
     return max(files, key=os.path.getctime)
 
 def create_sequences(data, seq_len):
-    """Converts a continuous stream of data into sequences for LSTM."""
     X = []
     for i in range(len(data) - seq_len):
         X.append(data[i : i + seq_len])
     return np.array(X)
 
 def main():
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    total_start = datetime.now()
+
     print("="*60)
-    print(f"🧠 CENTRAL BRAIN AI TRAINER v{__version__}")
-    print(f"⚡ TensorFlow: {tf.__version__}")
-    
-    # Check for GPU
-    gpus = tf.config.list_physical_devices('GPU')
-    if gpus:
-        print(f"🚀 GPU Acceleration Active: {len(gpus)} device(s) found.")
-    else:
-        print("⚠️  No GPU found. Training will be slow (CPU Mode).")
+    print(f"🧠 CENTRAL BRAIN TRAINER (Relative Paths)")
+    print(f"📂 Root: {PROJECT_ROOT}")
+    print(f"🆔 Run ID: {run_id}")
     print("="*60)
 
-    # 1. Load Data
     csv_file = get_latest_dataset()
     if not csv_file:
-        log("❌ No datasets found! Run fetch_training_data.py first.")
+        log(f"❌ No datasets found in {DATASET_DIR}")
         return
 
-    log(f"📂 Loading Dataset: {csv_file}...")
+    log(f"📂 Loading: {os.path.basename(csv_file)}")
     df = pd.read_csv(csv_file)
     
-    # Feature Selection (Physics & Geometry)
     features = ['lat', 'lon', 'alt_baro_ft', 'gs_knots', 'track', 'v_rate_fpm']
     data = df[features].values
-    
-    log(f"📊 Loaded {len(df)} rows. Features: {features}")
 
-    # 2. Preprocessing (Normalization)
-    # Neural Networks require inputs between 0 and 1
-    log("🔄 Normalizing data...")
+    log("🔄 Normalizing...")
     scaler = MinMaxScaler()
     data_scaled = scaler.fit_transform(data)
 
-    # Save Scaler (Critical for RPi5 Inference later)
     if not os.path.exists(MODEL_DIR): os.makedirs(MODEL_DIR)
-    scaler_path = f"{MODEL_DIR}/scaler_v2.gz"
-    joblib.dump(scaler, scaler_path)
-    log(f"💾 Scaler saved to {scaler_path}")
+    joblib.dump(scaler, f"{MODEL_DIR}/scaler_v2_{run_id}.gz")
 
-    # 3. Sequence Generation
-    log(f"🎞️  Generating Sequences (Window: {SEQ_LEN}s)...")
+    log("🎞️  Sequencing...")
     X_train = create_sequences(data_scaled, SEQ_LEN)
-    log(f"✅ Training Shape: {X_train.shape} (Samples, TimeSteps, Features)")
+    y_train = X_train[:, -1, :]
 
-    # ----------------------------------------------------------
-    # MODEL A: TRAJECTORY PREDICTOR (LSTM)
-    # Goal: Predict the NEXT point (t+1) based on history (t-10...t)
-    # Use Case: "Is the plane where physics says it should be?"
-    # ----------------------------------------------------------
-    log("\n🏋️‍♂️ TRAINING MODEL A: Trajectory Predictor (LSTM)...")
-    
-    # Target (Y) is the *next* point in the sequence (shifted by 1)
-    # For this simplified trainer, we predict the last step of the sequence
-    y_train = X_train[:, -1, :] 
-
-    model_lstm = Sequential([
-        LSTM(128, input_shape=(X_train.shape[1], X_train.shape[2]), return_sequences=False),
-        Dense(64, activation='relu'),
-        Dense(X_train.shape[2]) # Output: 6 features (Lat, Lon, Alt...)
-    ])
-
-    model_lstm.compile(optimizer='adam', loss='mse')
-    
-    # Early Stopping prevents overfitting
     stopper = EarlyStopping(monitor='loss', patience=3)
+
+    # --- MODEL A ---
+    log("🏋️‍♂️ Training Model A (LSTM)...")
+    model_a = Sequential([
+        LSTM(128, input_shape=(10, 6), return_sequences=False),
+        Dense(64, activation='relu'),
+        Dense(6)
+    ])
+    model_a.compile(optimizer='adam', loss='mse')
+    model_a.fit(X_train, y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[stopper], verbose=1)
+    model_a.save(f"{MODEL_DIR}/trajectory_lstm_v2_{run_id}.h5")
+
+    # --- MODEL B ---
+    log("🏋️‍♂️ Training Model B (Autoencoder)...")
+    inputs = Input(shape=(10, 6))
+    encoded = LSTM(64, activation='relu', return_sequences=False)(inputs)
+    decoded = RepeatVector(10)(encoded)
+    decoded = LSTM(64, activation='relu', return_sequences=True)(decoded)
+    output = TimeDistributed(Dense(6))(decoded)
     
-    model_lstm.fit(X_train, y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[stopper], verbose=1)
-    
-    lstm_path = f"{MODEL_DIR}/trajectory_lstm_v2.h5"
-    model_lstm.save(lstm_path)
-    log(f"✅ Model Saved: {lstm_path}")
+    model_b = Model(inputs, output)
+    model_b.compile(optimizer='adam', loss='mse')
+    model_b.fit(X_train, X_train, epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[stopper], verbose=1)
+    model_b.save(f"{MODEL_DIR}/anomaly_autoencoder_v2_{run_id}.h5")
 
-    # ----------------------------------------------------------
-    # MODEL B: ANOMALY DETECTOR (AUTOENCODER)
-    # Goal: Compress and Decompress the flight path.
-    # Use Case: "Does this flight path shape look normal?"
-    # ----------------------------------------------------------
-    log("\n🏋️‍♂️ TRAINING MODEL B: Anomaly Detector (Autoencoder)...")
-
-    inputs = Input(shape=(SEQ_LEN, 6))
-    # Encoder
-    L1 = LSTM(64, activation='relu', return_sequences=False)(inputs)
-    L2 = RepeatVector(SEQ_LEN)(L1)
-    # Decoder
-    L3 = LSTM(64, activation='relu', return_sequences=True)(L2)
-    output = TimeDistributed(Dense(6))(L3)
-
-    autoencoder = Model(inputs, output)
-    autoencoder.compile(optimizer='adam', loss='mse')
-
-    # Note: Autoencoder maps Input -> Input (Reconstruction)
-    autoencoder.fit(X_train, X_train, epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[stopper], verbose=1)
-
-    ae_path = f"{MODEL_DIR}/anomaly_autoencoder_v2.h5"
-    autoencoder.save(ae_path)
-    log(f"✅ Model Saved: {ae_path}")
-
-    log("\n🎉 ALL TRAINING COMPLETE.")
-    log(f"📦 Deliverables ready in '{MODEL_DIR}/'")
+    log(f"✅ Done. Total time: {datetime.now() - total_start}")
 
 if __name__ == "__main__":
     main()
+
