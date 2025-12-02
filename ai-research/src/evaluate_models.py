@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# CENTRAL BRAIN AI EVALUATOR v1.4.0
+# CENTRAL BRAIN AI EVALUATOR v1.5.0
 # ==============================================================================
-# Description:  Evaluates models and generates visual performance reports.
-#               Now includes DIRECT COMPARISON between LSTM and Autoencoder.
+# Updates:
+# - Added MODEL C: GRU Evaluation
+# - Added "Architecture Battle" (LSTM vs GRU) comparison
 # ==============================================================================
 
 import pandas as pd
@@ -50,85 +51,69 @@ def create_sequences(data, seq_len):
         X.append(data[i : i + seq_len])
     return np.array(X)
 
-# --- INDIVIDUAL PLOTS ---
-def plot_lstm_performance(y_true, y_pred, run_id, scaler):
-    y_true_inv = scaler.inverse_transform(y_true)
-    y_pred_inv = scaler.inverse_transform(y_pred)
+def evaluate(y_true, y_pred, name):
+    mse = mean_squared_error(y_true.flatten(), y_pred.flatten())
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true.flatten(), y_pred.flatten())
+    print(f"   🔹 {name.ljust(12)} -> MSE: {mse:.6f} | RMSE: {rmse:.6f} | MAE: {mae:.6f}")
+    return mse
 
-    plt.figure(figsize=(10, 6))
-    limit = 500 
-    plt.plot(y_true_inv[:limit, 1], y_true_inv[:limit, 0], 'b-', label='Actual Path', alpha=0.6)
-    plt.plot(y_pred_inv[:limit, 1], y_pred_inv[:limit, 0], 'r--', label='LSTM Prediction', alpha=0.8)
-    plt.title(f"LSTM Trajectory Prediction (Run: {run_id})")
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.savefig(f"{EVAL_DIR}/lstm_trajectory_{run_id}.png")
-    plt.close()
+# --- PLOTTING FUNCTIONS ---
 
 def plot_autoencoder_performance(y_true, y_pred, run_id):
     mae_per_sample = np.mean(np.abs(y_true - y_pred), axis=(1, 2))
-
     plt.figure(figsize=(10, 6))
     plt.hist(mae_per_sample, bins=50, color='purple', alpha=0.7, label='Reconstruction Error')
     threshold = np.percentile(mae_per_sample, 95)
     plt.axvline(threshold, color='red', linestyle='dashed', linewidth=2, label=f'95% Threshold')
     plt.title(f"Autoencoder Anomaly Distribution (Run: {run_id})")
-    plt.xlabel("Error (MAE)")
-    plt.ylabel("Count")
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.savefig(f"{EVAL_DIR}/autoencoder_distribution_{run_id}.png")
     plt.close()
 
-# --- COMPARISON PLOT ---
-def plot_model_comparison(y_true, pred_lstm, pred_ae, run_id, scaler):
+def plot_architecture_battle(y_true, pred_lstm, pred_gru, run_id, scaler):
     """
-    Overlays Actual vs LSTM Prediction vs Autoencoder Reconstruction
-    for Altitude and Speed.
+    Compares LSTM vs GRU vs Reality.
+    This decides which model goes to the Raspberry Pi.
     """
-    # Inverse transform all 3
     y_true_inv = scaler.inverse_transform(y_true)
     pred_lstm_inv = scaler.inverse_transform(pred_lstm)
-    pred_ae_inv = scaler.inverse_transform(pred_ae)
+    pred_gru_inv = scaler.inverse_transform(pred_gru)
+    
+    limit = 200 # Zoom in
 
-    # We look at the first 200 steps for clarity
-    limit = 200
-    
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-    
-    # Plot 1: Altitude Comparison (Index 2)
-    ax1.plot(y_true_inv[:limit, 2], 'k-', linewidth=2, label='Actual (Physics)')
-    ax1.plot(pred_lstm_inv[:limit, 2], 'r--', label='LSTM (Future Prediction)')
-    ax1.plot(pred_ae_inv[:limit, 2], 'g:', linewidth=2, label='Autoencoder (Reconstruction)')
-    ax1.set_title(f"Model Battle: Altitude (Feet) - {run_id}")
+
+    # 1. Altitude
+    ax1.plot(y_true_inv[:limit, 2], 'k-', linewidth=2, label='Actual')
+    ax1.plot(pred_lstm_inv[:limit, 2], 'r--', label='LSTM (Big Model)')
+    ax1.plot(pred_gru_inv[:limit, 2], 'b:', linewidth=2, label='GRU (RPi Model)')
+    ax1.set_title(f"Architecture Battle: Altitude (LSTM vs GRU) - {run_id}")
     ax1.set_ylabel("Altitude (ft)")
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
-    # Plot 2: Ground Speed Comparison (Index 3)
+    # 2. Speed
     ax2.plot(y_true_inv[:limit, 3], 'k-', linewidth=2, label='Actual')
     ax2.plot(pred_lstm_inv[:limit, 3], 'r--', label='LSTM')
-    ax2.plot(pred_ae_inv[:limit, 3], 'g:', linewidth=2, label='Autoencoder')
-    ax2.set_title(f"Model Battle: Ground Speed (Knots) - {run_id}")
+    ax2.plot(pred_gru_inv[:limit, 3], 'b:', linewidth=2, label='GRU')
+    ax2.set_title(f"Architecture Battle: Speed (LSTM vs GRU) - {run_id}")
     ax2.set_ylabel("Speed (knots)")
-    ax2.set_xlabel("Time Steps")
     ax2.legend()
     ax2.grid(True, alpha=0.3)
 
-    path = f"{EVAL_DIR}/comparison_models_{run_id}.png"
+    path = f"{EVAL_DIR}/battle_lstm_vs_gru_{run_id}.png"
     plt.savefig(path)
     plt.close()
     return path
 
 def main():
-    print(f"📊 EVALUATOR v1.4 | Root: {PROJECT_ROOT}")
+    print(f"📊 EVALUATOR v1.5 | Root: {PROJECT_ROOT}")
     
     csv_file = get_latest_dataset()
     if not csv_file: return print("❌ No data found.")
     
-    print(f"📂 Loading Data: {os.path.basename(csv_file)}")
     df = pd.read_csv(csv_file)
     data = df[FEATURE_NAMES].values
     
@@ -138,53 +123,53 @@ def main():
     for run_id in run_ids:
         print(f"\n🆔 RUN: {run_id}")
         
-        # Define Paths
-        if run_id == "LEGACY":
-            s_p = f"{MODEL_DIR}/scaler_v2.gz"
-            l_p = f"{MODEL_DIR}/trajectory_lstm_v2.h5"
-            a_p = f"{MODEL_DIR}/anomaly_autoencoder_v2.h5"
-        else:
-            s_p = f"{MODEL_DIR}/scaler_v2_{run_id}.gz"
-            l_p = f"{MODEL_DIR}/trajectory_lstm_v2_{run_id}.h5"
-            a_p = f"{MODEL_DIR}/anomaly_autoencoder_v2_{run_id}.h5"
+        # Paths
+        suffix = "" if run_id == "LEGACY" else f"_{run_id}"
+        s_p = f"{MODEL_DIR}/scaler_v2{suffix}.gz"
+        l_p = f"{MODEL_DIR}/trajectory_lstm_v2{suffix}.h5"
+        a_p = f"{MODEL_DIR}/anomaly_autoencoder_v2{suffix}.h5"
+        g_p = f"{MODEL_DIR}/trajectory_gru_v2{suffix}.h5" # NEW
 
         if not os.path.exists(s_p): continue
 
-        # Prepare Data
         scaler = joblib.load(s_p)
         data_scaled = scaler.transform(data)
         X_all = create_sequences(data_scaled, SEQ_LEN)
         X_test = X_all[int(len(X_all) * (1 - TEST_SPLIT)):]
         
-        # Prepare Variables for Comparison
+        # Hold predictions for comparison
         pred_lstm = None
-        pred_ae_reconstructed = None
-        
-        # 1. Run LSTM
+        pred_gru = None
+
+        # 1. Evaluate LSTM
         if os.path.exists(l_p):
             try:
-                model_a = tf.keras.models.load_model(l_p, compile=False)
-                pred_lstm = model_a.predict(X_test, verbose=0)
-                plot_lstm_performance(X_test[:, -1, :], pred_lstm, run_id, scaler)
-                print("      ✅ LSTM Evaluated")
-            except Exception as e: print(f"      ❌ LSTM Error: {e}")
+                model = tf.keras.models.load_model(l_p, compile=False)
+                pred_lstm = model.predict(X_test, verbose=0)
+                evaluate(X_test[:, -1, :], pred_lstm, "LSTM")
+            except: pass
 
-        # 2. Run Autoencoder
+        # 2. Evaluate GRU (NEW)
+        if os.path.exists(g_p):
+            try:
+                model = tf.keras.models.load_model(g_p, compile=False)
+                pred_gru = model.predict(X_test, verbose=0)
+                evaluate(X_test[:, -1, :], pred_gru, "GRU")
+            except Exception as e: print(f"   ❌ GRU Error: {e}")
+
+        # 3. Evaluate Autoencoder
         if os.path.exists(a_p):
             try:
-                model_b = tf.keras.models.load_model(a_p, compile=False)
-                pred_ae = model_b.predict(X_test, verbose=0)
+                model = tf.keras.models.load_model(a_p, compile=False)
+                pred_ae = model.predict(X_test, verbose=0)
+                evaluate(X_test, pred_ae, "Autoencoder")
                 plot_autoencoder_performance(X_test, pred_ae, run_id)
-                
-                # Extract the LAST step of reconstruction to compare with LSTM
-                pred_ae_reconstructed = pred_ae[:, -1, :]
-                print("      ✅ Autoencoder Evaluated")
-            except Exception as e: print(f"      ❌ AE Error: {e}")
+            except: pass
 
-        # 3. Generate Comparison (If both exist)
-        if pred_lstm is not None and pred_ae_reconstructed is not None:
-            f_comp = plot_model_comparison(X_test[:, -1, :], pred_lstm, pred_ae_reconstructed, run_id, scaler)
-            print(f"      ⚔️  Comparison Plot Saved: {os.path.basename(f_comp)}")
+        # 4. Visual Battle (LSTM vs GRU)
+        if pred_lstm is not None and pred_gru is not None:
+            f_battle = plot_architecture_battle(X_test[:, -1, :], pred_lstm, pred_gru, run_id, scaler)
+            print(f"      ⚔️  Architecture Battle Saved: {os.path.basename(f_battle)}")
 
 if __name__ == "__main__":
     main()
