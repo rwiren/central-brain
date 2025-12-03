@@ -358,7 +358,8 @@ This sensor node contributes data to global networks, allowing us to validate ou
 | **PlaneFinder (office)**| [Receiver 235846](https://planefinder.net/coverage/receiver/235846) | 🟢 Active |
 | **PlaneFinder (balcony)** | [Receiver 235915](https://planefinder.net/coverage/receiver/235915) | 🟢 Active |
 | **FlightAware** | [User: rwiren2](https://www.flightaware.com/adsb/stats/user/rwiren2) | 🟢 Active |
-| **FlightRadar24** | [Feed ID: 72235](https://www.flightradar24.com/account/feed-stats/?id=72235) | 🟢 Active |
+| **FlightRadar24 (oofice)**| [Feed ID: 72235](https://www.flightradar24.com/account/feed-stats/?id=72235) | 🟢 Active |
+| **FlightRadar24 (balcony** | [Feed ID: 72866](https://www.flightradar24.com/account/feed-stats/?id=72866) | 🟢 Active |
 
 ---
 
