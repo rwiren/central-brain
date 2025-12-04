@@ -361,6 +361,24 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 
 The shaded area represents the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet, taking terrain obstructions into account.
 
+### **Geospatial Analysis (Map)**
+* **Left:** Before Move (Indoor/Office) — Limited to local municipality.
+* **Right:** After Move (Outdoor/Balcony) — Monitoring airspace across Southern Finland, Gulf of Finland, and Estonia.
+
+| **Before (Indoor)** | **After (Balcony)** |
+| :---: | :---: |
+| ![Coverage Indoor Map](assets/coverage_indoor_20251130.jpg) | ![Coverage Outdoor Map](assets/outdoor_coverage.png) |
+
+### **Quantitative Analysis (Signal Distribution)**
+The relocation drastically improved signal reception range and position volume. Note the shift from a hard limit at 40nm to detections exceeding 200nm.
+
+| **Indoor Distribution** | **Outdoor Distribution** |
+| :---: | :---: |
+| *Nov 30, 2025* | *Dec 5, 2025* |
+| ![Indoor Graph](assets/coverage_indoor_20251130.png) | ![Outdoor Graph](assets/outdoor_coverage_20251205.png) |
+| **Max Range:** < 40 nm | **Max Range:** > 200 nm |
+| **Total Positions:** ~55k | **Total Positions:** ~150k+ |
+
 ---
 
 ## <a name="global-validation"></a>🌐 Global Validation
