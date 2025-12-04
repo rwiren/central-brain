@@ -356,7 +356,7 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-12-05)*
 
 ### **Quantitative Analysis (Signal Distribution)**
-The relocation drastically improved signal reception range and position volume. Note the shift from a hard limit at 40nm to detections exceeding 200nm.
+The relocation from indoor office "energy efficient window" to outdoor balcony drastically improved signal reception range and position volume. Note the shift from a hard limit at 40nm to detections exceeding 200nm.
 
 | **Office Distribution** | **Balcony Distribution** |
 | :---: | :---: |
