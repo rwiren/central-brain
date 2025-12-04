@@ -338,7 +338,7 @@ We are implementing a **Multilateration (MLAT)** engine to act as a physics-base
 🧮 **[TEST THE 3D SOLVER ENGINE (Live Simulation)](https://colab.research.google.com/github/rwiren/central-brain/blob/main/tools/mlat_physics_engine.ipynb)** <-- NEW !
 
 ### Verification Data
-Following the **relocation** of the RPi4 sensor node (including antennas) from the indoor office to the **outdoor balcony** at the beginning of December 2025, we observe a distinct rise in MLAT-derived positions (Orange Line). This validates the network's increasing ability to triangulate signal sources independently of reported GPS.
+Following the **relocation** of the RPi4 sensor node (including antennas) from the indoor office to the **outdoor balcony** at the beginning of December 2025, we can see a distinct rise in MLAT-derived positions (Orange Line). This validates the network's increasing ability to triangulate signal sources independently of reported GPS together with other user at from the feeder service.
 
 ![Aircraft Stats](assets/FA_aircrafts_2025-12-04.png)
 *Source: [FlightAware User Stats](https://www.flightaware.com/adsb/stats/user/rwiren2#stats-261625)*
