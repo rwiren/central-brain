@@ -349,10 +349,10 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 
 ### **Geospatial Analysis (Map)**
 
-**Before: Indoor / Office (Nov 30)** [![Receiver Coverage Indoor](assets/coverage-map-2025-11-30.png)](assets/coverage-map-2025-11-30.png)  
+[![Receiver Coverage Indoor](assets/coverage-map-2025-11-30.png)](assets/coverage-map-2025-11-30.png)  
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
-**After: Outdoor / Balcony (Dec 05)** [![Receiver Coverage Outdoor](assets/outdoor_coverage.png)](assets/outdoor_coverage.png)  
+[![Receiver Coverage Outdoor](assets/outdoor_coverage.png)](assets/outdoor_coverage.png)  
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-12-05)*
 
 ### **Quantitative Analysis (Signal Distribution)**
