@@ -368,7 +368,7 @@ The relocation from indoor office "energy efficient window" to outdoor balcony d
 ---
 
 ## <a name="global-validation"></a>🌐 Global Validation
-This sensor node contributes data to global networks, allowing us to validate our local findings against community data.
+This sensor node contributes data to global networks, allowing us to validate our local findings against community data (added another rpi4 for testing)
 
 | Network | Station ID | Status |
 | :--- | :--- | :--- |
