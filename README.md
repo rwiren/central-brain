@@ -352,6 +352,13 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
+
+
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/outdoor_coverage.png)](https://github.com/rwiren/central-brain/blob/main/assets/outdoor_coverage.png?raw=true)
+
+
+*Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-12-05)*
+
 The shaded area represents the theoretical maximum distance the receiver should be able to spot aircraft flying at 10k and 40k feet, taking terrain obstructions into account.
 
 ---
