@@ -33,6 +33,8 @@
 
 **Goal:** Detect flight anomalies in real-time by comparing local RF data against global reference networks (OpenSky) and analyzing kinematic physics (e.g., impossible turns, fake go-arounds).
 
+> 📓 **Project Journal:** For a detailed history of updates, versions, and architectural decisions, please see my **[Release Notes & Journal](./RELEASENOTES.md)**.
+
 ---
 
 ## <a name="hardware-architecture"></a>🔭 Hardware Architecture
