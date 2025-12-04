@@ -347,8 +347,7 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 
 ## <a name="receiver-coverage"></a>🗺️ Receiver Coverage
 
-[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png?raw=true)
-
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)]([https://github.com/rwiren/central-brain/blob/main/](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/coverage-map-2025-11-30.png)]([https://github.com/rwiren/central-brain/blob/main/](https://raw.githubusercontent.com/rwiren/central-brain/main/assets/coverage-map-2025-11-30.png)
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
