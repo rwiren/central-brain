@@ -347,14 +347,14 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 
 ## <a name="receiver-coverage"></a>🗺️ Receiver Coverage
 
-[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/coverage-map-2025-11-30.png)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png?raw=true)
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png)](https://github.com/rwiren/central-brain/blob/main/assets/coverage-map-2025-11-30.png?raw=true)
 
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-11-30)*
 
 
 
-[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](assets/outdoor_coverage.png)](https://github.com/rwiren/central-brain/blob/main/assets/outdoor_coverage.png?raw=true)
+[![Receiver Coverage - Helsinki Vantaa Area (Click to enlarge)](https://github.com/rwiren/central-brain/blob/main/assets/outdoor_coverage.png)](https://github.com/rwiren/central-brain/blob/main/assets/outdoor_coverage.png?raw=true)
 
 
 *Source: [PlaneFinder Receiver 235846](https://planefinder.net/coverage/receiver/235846) (Updated: 2025-12-05)*
@@ -367,7 +367,7 @@ The relocation drastically improved signal reception range and position volume. 
 | **Indoor Distribution** | **Outdoor Distribution** |
 | :---: | :---: |
 | *Nov 30, 2025* | *Dec 5, 2025* |
-| ![Indoor Graph](assets/coverage_indoor_20251130.png) | ![Outdoor Graph](assets/outdoor_coverage_20251205.png) |
+| ![Indoor Graph](https://github.com/rwiren/central-brain/blob/main/assets/coverage_indoor_20251130.png) | ![Outdoor Graph](https://github.com/rwiren/central-brain/blob/main/assets/outdoor_coverage_20251205.png) |
 | **Max Range:** < 40 nm | **Max Range:** > 200 nm |
 | **Total Positions:** ~55k | **Total Positions:** ~150k+ |
 
