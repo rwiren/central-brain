@@ -358,7 +358,7 @@ Following the **relocation** of the RPi4 sensor node (including antennas) from t
 ### **Quantitative Analysis (Signal Distribution)**
 The relocation drastically improved signal reception range and position volume. Note the shift from a hard limit at 40nm to detections exceeding 200nm.
 
-| **Indoor Distribution** | **Outdoor Distribution** |
+| **Office Distribution** | **Balcony Distribution** |
 | :---: | :---: |
 | *Nov 30, 2025* | *Dec 5, 2025* |
 | ![Indoor Graph](assets/coverage_indoor_20251130.png) | ![Outdoor Graph](assets/outdoor_coverage_20251205.png) |
