@@ -412,7 +412,7 @@ This sensor node contributes data to global networks, allowing us to validate ou
 
 ## <a name="acknowledgements"></a>📚 Acknowledgements & References
 
-* **Base Infrastructure:** [balena-ads-b](https://hub.balena.io/apps/1829313/balena-ads-b)
+* **Base Infrastructure:** [balena-ads-b](https://github.com/ketilmo/balena-ads-b)
 * **Data Validation:** [OpenSky Network Config](https://www.opensky-network.org/data/api)
 * **Hardware:** [RTL-SDR.com](https://www.rtl-sdr.com/)
 * **Security Research:** [Defeating ADS-B (YouTube)](https://www.youtube.com/watch?v=51zEjso9kZw)
