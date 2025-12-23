@@ -1,4 +1,3 @@
-cat <<EOF > adsb-feeders/run.sh
 #!/bin/bash
 # ==============================================================================
 # Script: run.sh
@@ -10,10 +9,10 @@ echo "[INIT] Starting ADSB Feeder Stack (v4.0.0 Level 4)..."
 
 # Function to run scripts in the background with auto-restart
 run_script() {
-    echo "   -> Launching \$1..."
+    echo "   -> Launching $1..."
     while true; do
-        python3 -u "\$1"
-        echo "   ⚠️  \$1 crashed! Restarting in 15s..."
+        python3 -u "$1"
+        echo "   ⚠️  $1 crashed! Restarting in 15s..."
         sleep 15
     done &
 }
@@ -38,4 +37,3 @@ run_script "live_labeler.py"
 
 # Keep container alive
 tail -f /dev/null
-EOF
