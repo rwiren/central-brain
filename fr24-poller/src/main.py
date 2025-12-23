@@ -125,7 +125,7 @@ def process_sleigh(flights, now_ns):
             f"alt_baro_ft={int(alt)}i,"
             f"gs_knots={float(speed)},"
             f"track={float(heading)},"
-            f"vert_rate_fpm={float(vert_rate)}i," # <--- Physics Engine Input
+            f"vert_rate_fpm={float(vert_rate)}," # <--- Physics Engine Input
             f"is_anomaly=true,"       # Flag for Data Scientists
             f"magic_enabled=true,"    # Dashboard flag
             f"origin_data=\"NorthPole\""
