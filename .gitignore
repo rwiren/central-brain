@@ -39,3 +39,33 @@ isac*
 jorvas*
 *_internal.py
 internal/
+
+# --- DATA & DUMPS ---
+*.csv
+*.csv.gz
+*.lp
+*.lp.gz
+*.zip
+*.h5
+*.keras
+dump_sample_*/
+golden_dataset_*/
+training_packages/
+dataset_dump*/
+archive_keimola_tower/
+
+# --- PYTHON ---
+__pycache__/
+*.pyc
+venv/
+.env
+requirements.txt.old
+
+# --- OS JUNK ---
+.DS_Store
+._*
+
+# --- CONFIGS (Secrets) ---
+# Keep your active configs if you want, but ignore random backups
+f388*.json
+fd81*.json

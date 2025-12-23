@@ -1,0 +1,390 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "type": "timeseries",
+      "title": "\ud83d\udce1 GNSS Precision (Horizontal Error)",
+      "description": "Comparison of GPS Accuracy. Reference Node (Office) should be < 1.0m. Scout (Balcony) ~3-5m.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "targets": [
+        {
+          "alias": "$tag_host Error (m)",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "gpsd_tpv",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"epx\") FROM \"gpsd_tpv\" WHERE (\"host\" =~ /^$host$/) AND $timeFilter GROUP BY time($__interval), \"host\"",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "epx"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "host",
+              "operator": "=~",
+              "value": "/^$host$/"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Error (meters)",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "spanNulls": true
+          },
+          "unit": "lengthm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 1.5
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "type": "timeseries",
+      "title": "\ud83d\udef0\ufe0f Satellite Lock (Sky View)",
+      "description": "How many satellites are visible? Balcony should see more than Office.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "targets": [
+        {
+          "alias": "$tag_host Satellites",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "gpsd_sky",
+          "query": "SELECT mean(\"satellites_used\") FROM \"gpsd_sky\" WHERE (\"host\" =~ /^$host$/) AND $timeFilter GROUP BY time($__interval), \"host\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "satellites_used"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 20
+        }
+      }
+    },
+    {
+      "id": 3,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "type": "timeseries",
+      "title": "\u2708\ufe0f ADS-B Message Rate",
+      "description": "Traffic volume. Balcony (Scout) should typically see more than Office (Indoor).",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "targets": [
+        {
+          "alias": "$tag_host Msgs/sec",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "readsb",
+          "query": "SELECT mean(\"messages\") FROM \"readsb\" WHERE (\"host\" =~ /^$host$/) AND $timeFilter GROUP BY time($__interval), \"host\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "messages"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "type": "timeseries",
+      "title": "\ud83d\udce1 Max Range (Nautical Miles)",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "targets": [
+        {
+          "alias": "$tag_host Range (NM)",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "readsb",
+          "query": "SELECT mean(\"max_distance_in_nautical_miles\") FROM \"readsb\" WHERE (\"host\" =~ /^$host$/) AND $timeFilter GROUP BY time($__interval), \"host\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_distance_in_nautical_miles"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthnm"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "type": "timeseries",
+      "title": "\ud83d\udd25 CPU Temperature",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "targets": [
+        {
+          "alias": "$tag_host Temp",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "host"
+              ],
+              "type": "tag"
+            }
+          ],
+          "measurement": "system_stats",
+          "query": "SELECT mean(\"cpu_temp\") FROM \"system_stats\" WHERE (\"host\" =~ /^$host$/) AND $timeFilter GROUP BY time($__interval), \"host\"",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "cpu_temp"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "max": 80
+        }
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [
+    "adsb",
+    "keimola",
+    "rtk"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "InfluxDB",
+          "value": "InfluxDB"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "allValue": null,
+        "datasource": {
+          "type": "influxdb",
+          "uid": "${DS}"
+        },
+        "definition": "SHOW TAG VALUES FROM \"system_stats\" WITH KEY = \"host\"",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Nodes",
+        "multi": true,
+        "name": "host",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"system_stats\" WITH KEY = \"host\"",
+        "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Keimola Grid: Reference vs Scout",
+  "uid": "keimola_architecture_v1",
+  "version": 1,
+  "weekStart": "monday"
+}

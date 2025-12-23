@@ -1,173 +1,179 @@
+# ==============================================================================
+# Project: Central Brain (The Core)
+# Version: 3.7.0 (Fix: Telegraf Auth & Grafana Token)
+# Device:  Raspberry Pi 5 (BalenaOS)
+# ==============================================================================
+
 version: '2.1'
 
 volumes:
   influxdb-data:
   grafana-data:
-  readsb-data:
   mosquitto-data:
+  readsb-pb-data: 
 
 services:
-  # ============================================================================
-  # 1. MQTT BROKER (Custom Build from ./mqtt folder)
-  # ============================================================================
-  mqtt:
-    build: ./mqtt 
-    network_mode: host
+
+  # ---------------------------------------------------------------------------
+  # 1. CORE INFRASTRUCTURE
+  # ---------------------------------------------------------------------------
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
     restart: always
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=readsb
+      - INFLUXDB_HTTP_LOG_ENABLED=false
+      - INFLUXDB_HTTP_LOGGING_ENABLED=false
+      - INFLUXDB_DATA_QUERY_LOG_ENABLED=false
+      - INFLUXDB_UDP_ENABLED=false
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
+      # [FIX] Prevent log spam "token needs to be rotated"
+      - GF_AUTH_TOKEN_ROTATION_INTERVAL_MINUTES=1440
+
+  mqtt:
+    build: ./mqtt
+    container_name: mqtt
+    restart: always
+    ports:
+      - "1883:1883"
     volumes:
       - mosquitto-data:/mosquitto/data
 
-  # ============================================================================
-  # 2. AGGREGATOR (ReadsB - Net Only)
-  # ============================================================================
+  # [MONITORING] RPi 5 Self-Health
+  telegraf:
+    build: ./telegraf
+    restart: always
+    privileged: true
+    labels:
+      io.balena.features.balena-socket: '1'
+      io.balena.features.procfs: '1'
+    environment:
+      - HOST_ETC=/host/etc
+      - HOST_PROC=/proc
+      - HOST_SYS=/sys
+      - HOST_MOUNT_PREFIX=/
+      # [FIX] Connect Telegraf to InfluxDB with Auth
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_DB=readsb
+      - SENSOR_ID=central-brain
+      # Variables passed from Dashboard
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_USER=${INFLUX_USER}
+      - INFLUX_PASSWORD=${INFLUX_PASSWORD}
+
+  # ---------------------------------------------------------------------------
+  # 2. VISUALIZATION
+  # ---------------------------------------------------------------------------
+
   readsb:
     image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
-    network_mode: host
-    privileged: true
     restart: always
+    volumes:
+      - readsb-pb-data:/var/globe_history
     environment:
       - TZ=Europe/Helsinki
+      - READSB_DEVICE_TYPE=none
       - READSB_NET_ONLY=true
-      - READSB_NET_ENABLE=true
-      - READSB_NET_CONNECTOR=192.168.1.152,30005,beast_in
-      - READSB_NET_BUFFER=2
-      - READSB_WRITE_JSON_EVERY=1
-      - READSB_WEB_ENABLE=true
-      - READSB_NET_BEAST_INPUT_PORT=30004
-      - READSB_NET_BEAST_OUTPUT_PORT=30005
-      - READSB_NET_SBS_OUTPUT_PORT=30003
-      - READSB_LAT=${LAT}
-      - READSB_LON=${LON}
-    volumes:
-      - readsb-data:/var/lib/readsb/pb
+      - READSB_NET_CONNECTOR=192.168.1.153,30005,beast_in;192.168.1.9,30005,beast_in
+      - READSB_LAT=60.319555
+      - READSB_LON=24.830819
+      # [FIX] Filter out "underground" aircraft noise
+      - READSB_FILTER_PERSISTENCE=true
+    ports:
+      - "30005:30005" 
+      - "30004:30004"
 
-  # ============================================================================
-  # 3. DATABASE (InfluxDB)
-  # ============================================================================
-  influxdb:
-    image: influxdb:1.8
-    network_mode: host
+  tar1090:
+    image: ghcr.io/sdr-enthusiasts/docker-tar1090:latest
     restart: always
-    environment:
-      - INFLUXDB_DB=readsb
-      - INFLUXDB_ADMIN_ENABLED=true
-      - INFLUXDB_ADMIN_USER=${INFLUX_USER}
-      - INFLUXDB_ADMIN_PASSWORD=${INFLUX_PASSWORD}
+    ports:
+      - "8080:80"
     volumes:
-      - influxdb-data:/var/lib/influxdb
-
-  # ============================================================================
-  # 4. DASHBOARD (Grafana)
-  # ============================================================================
-  grafana:
-    image: grafana/grafana:latest
-    network_mode: host
-    restart: always
+      - readsb-pb-data:/var/globe_history
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-worldmap-panel
-    volumes:
-      - grafana-data:/var/lib/grafana
+      - TZ=Europe/Helsinki
+      - BEASTHOST=readsb
+      - LAT=60.319555
+      - LON=24.830819
+      - TITLE=Central Brain (Fused Feed)
+      - TAR1090_DEFAULTCENTERLAT=60.319555
+      - TAR1090_DEFAULTCENTERLON=24.830819
+      - TAR1090_ZOOM=12
 
-  # ============================================================================
-  # 5. DATA FEEDERS (Pushing readsb/OpenSky to InfluxDB)
-  # ============================================================================
+  # ---------------------------------------------------------------------------
+  # 3. LOGIC ENGINES
+  # ---------------------------------------------------------------------------
+
   adsb-feeders:
-    build:
-      context: ./adsb-feeders
-      dockerfile: Dockerfile
+    build: ./adsb-feeders
+    container_name: adsb-feeders
     restart: always
-    network_mode: host
-    depends_on:
-      - readsb
-      - influxdb
-    environment:
-      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
-      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
-
-  # ============================================================================
-  # 6. SPOOF DETECTOR (Security & Drift Analysis)
-  # ============================================================================
-  spoof-detector:
-    build: ./spoof-detector
-    restart: always
-    network_mode: host
-    depends_on:
-      - readsb
-      - mqtt
-    environment:
-      - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID}
-      - OPENSKY_CLIENT_SECRET=${OPENSKY_CLIENT_SECRET}
-      - MQTT_BROKER=192.168.1.134 
-      - MQTT_PORT=1883
-      - LOCAL_READSB_URL=http://192.168.1.152:8080/data/aircraft.json 
-      - MY_LAT=${LAT}
-      - MY_LON=${LON}
-
-  # ============================================================================
-  # 7. SYSTEM OBSERVER (Health & GPS Stats)
-  # ============================================================================
-  system-observer:
-    build: ./system-observer
-    privileged: true
-    restart: always
-    network_mode: host
     depends_on:
       - influxdb
     environment:
-      - INFLUX_HOST=192.168.1.134
+      - INFLUX_HOST=http://influxdb:8086
+      - INFLUX_HOST_NAME=influxdb
       - INFLUX_DB=readsb
-      - DEVICE_NAME=Central-Brain
 
-  # ============================================================================
-  # 8. PHYSICS GUARD (Kinematic Integrity)
-  # ============================================================================
-  physics-guard:
-    build: ./physics-guard
-    restart: always
-    network_mode: host
-    depends_on:
-      - influxdb
-      - mqtt
-    environment:
-      - INFLUX_HOST=192.168.1.134
-      - INFLUX_PORT=8086
-      - INFLUX_DB=readsb
-      - MQTT_BROKER=192.168.1.134
-      - MQTT_PORT=1883
-      - GRAFANA_HOST=192.168.1.134
-
-  # ============================================================================
-  # 9. RUNWAY TRACKER (EFHK Operations)
-  # ============================================================================
-  runway-tracker:
-    build: ./runway-tracker
-    restart: always
-    network_mode: host
-    depends_on:
-      - readsb
-      - influxdb
-    environment:
-      - INFLUX_HOST=192.168.1.134
-      - INFLUX_PORT=8086
-      - INFLUX_DB=readsb
-      - SDR_HOST=127.0.0.1
-      - SDR_PORT=8080
-      - MQTT_BROKER=192.168.1.134 
-      - TARGET_AIRPORT=EFHK
-      - GAZETTEER_URL=http://192.168.1.134:3000/public/gazetteer/airports.geojson
-
-  # ============================================================================
-  # 10. FR24 INTELLIGENCE (Global Truth Data)
-  # ============================================================================
   fr24-poller:
     build: ./fr24-poller
     restart: always
-    network_mode: host
     depends_on:
       - influxdb
     environment:
-      - INFLUX_HOST=192.168.1.134
-      - INFLUX_DB=readsb
-      - FR24_API_TOKEN=${FR24_API_TOKEN}
-      - FR24_BOUNDS=60.6,59.9,24.3,25.5
+      - INFLUX_HOST=influxdb 
+      - INFLUX_PORT=8086
+
+  spoof-detector:
+    build: ./spoof-detector
+    restart: always
+    depends_on:
+      - influxdb
+      - mqtt
+    environment:
+      - INFLUX_HOST=influxdb
+      - INFLUX_PORT=8086
+      - MQTT_HOST=mqtt
+      - MQTT_PORT=1883
+
+  physics-guard:
+    build: ./physics-guard
+    restart: always
+    depends_on:
+      - influxdb
+      - mqtt
+    environment:
+      - INFLUX_HOST=influxdb 
+      - INFLUX_PORT=8086
+      - MQTT_HOST=mqtt
+      - MQTT_PORT=1883
+
+  runway-tracker:
+    build: ./runway-tracker
+    restart: always
+    depends_on:
+      - influxdb
+      - mqtt
+    environment:
+      - INFLUX_HOST=influxdb 
+      - INFLUX_PORT=8086
+      - MQTT_HOST=mqtt
+      - MQTT_PORT=1883

@@ -1,5 +1,5 @@
 # 📡 Central Brain Data Schema
-**Generated:** 2025-12-07 15:30
+**Generated:** 2025-12-23 20:29
 **Database:** `readsb`
 **Host:** `192.168.1.134`
 
@@ -12,18 +12,14 @@
 - [aircraft](#aircraft)
 - [cpu](#cpu)
 - [disk](#disk)
-- [flight_ops](#flight_ops)
 - [global_aircraft_state](#global_aircraft_state)
-- [global_truth](#global_truth)
 - [gps_data](#gps_data)
 - [gps_drift](#gps_drift)
 - [gps_tpv](#gps_tpv)
-- [integrity_check](#integrity_check)
 - [local_aircraft_state](#local_aircraft_state)
 - [local_performance](#local_performance)
 - [mem](#mem)
 - [physics_alerts](#physics_alerts)
-- [readsb](#readsb)
 - [rf_battle_stats](#rf_battle_stats)
 - [runway_events](#runway_events)
 - [security_alerts](#security_alerts)
@@ -52,36 +48,12 @@
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
 | :--- | :--- |
-| `Call` | Metadata |
-| `Gnd` | Metadata |
-| `Icao` | Metadata |
-| `Mlat` | Metadata |
-| `SpdTyp` | Metadata |
-| `Sqk` | Metadata |
-| `Tisb` | Metadata |
-| `TrkH` | Metadata |
-| `VsiT` | Metadata |
 | `callsign` | Flight Number |
-| `host` | Sensor Identity |
 | `icao` | Aircraft Hex ID |
 
 ### 🔢 Fields (Metrics)
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
-| `Alt` | `float` | Raw Value |
-| `Cmsgs` | `float` | Raw Value |
-| `GAlt` | `float` | Raw Value |
-| `InHg` | `float` | Raw Value |
-| `Lat` | `float` | Raw Value |
-| `Long` | `float` | Raw Value |
-| `PosTime` | `float` | Raw Value |
-| `Sig` | `float` | Raw Value |
-| `Spd` | `float` | Raw Value |
-| `TAlt` | `float` | Raw Value |
-| `TTrk` | `float` | Raw Value |
-| `Trak` | `float` | Raw Value |
-| `Trt` | `float` | Raw Value |
-| `Vsi` | `float` | Raw Value |
 | `alt` | `float` | Altitude (Geometric/Ellipsoid) |
 | `alt_baro_ft` | `integer` | Barometric Altitude (ft) |
 | `gs` | `float` | Raw Value |
@@ -97,11 +69,15 @@
 | Tag Key | Description |
 | :--- | :--- |
 | `cpu` | Metadata |
+| `fleet_role` | Metadata |
 | `gnss_type` | Metadata |
 | `host` | Sensor Identity |
+| `lat` | Metadata |
 | `location` | Metadata |
+| `lon` | Metadata |
 | `placement` | Metadata |
 | `role` | Node Role (Anchor/Scout) |
+| `sensor_id` | Metadata |
 | `sensor_role` | Metadata |
 
 ### 🔢 Fields (Metrics)
@@ -124,14 +100,18 @@
 | Tag Key | Description |
 | :--- | :--- |
 | `device` | Metadata |
+| `fleet_role` | Metadata |
 | `fstype` | Metadata |
 | `gnss_type` | Metadata |
 | `host` | Sensor Identity |
+| `lat` | Metadata |
 | `location` | Metadata |
+| `lon` | Metadata |
 | `mode` | Metadata |
 | `path` | Metadata |
 | `placement` | Metadata |
 | `role` | Node Role (Anchor/Scout) |
+| `sensor_id` | Metadata |
 | `sensor_role` | Metadata |
 
 ### 🔢 Fields (Metrics)
@@ -147,31 +127,6 @@
 | `used_percent` | `float` | Raw Value |
 
 ---
-## `flight_ops`
-### 🏷️ Tags (Indexed)
-| Tag Key | Description |
-| :--- | :--- |
-| `event_type` | Metadata |
-| `hour` | Metadata |
-| `icao` | Aircraft Hex ID |
-| `runway_guess` | Metadata |
-| `source` | Metadata |
-| `weekday` | Metadata |
-
-### 🔢 Fields (Metrics)
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `alt_ft` | `integer` | Raw Value |
-| `bearing_deg` | `float` | Bearing to Aircraft (deg) |
-| `distance_km` | `float` | Distance to Aircraft (km) |
-| `event_score` | `integer` | Raw Value |
-| `is_spoofed` | `integer` | Spoofing Flag (0=OK, 1=WARN) |
-| `lat` | `float` | Latitude (deg) |
-| `lon` | `float` | Longitude (deg) |
-| `speed_kts` | `integer` | Raw Value |
-| `vertical_rate` | `integer` | Raw Value |
-
----
 ## `global_aircraft_state`
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
@@ -180,13 +135,16 @@
 | `data_source_type` | Metadata |
 | `icao` | Aircraft Hex ID |
 | `icao24` | Metadata |
+| `origin_country` | Metadata |
 | `source` | Metadata |
 
 ### 🔢 Fields (Metrics)
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
+| `alt_baro_ft` | `float` | Barometric Altitude (ft) |
 | `alt_ft` | `integer` | Raw Value |
 | `baro_alt_m` | `float` | Raw Value |
+| `gs_knots` | `float` | Ground Speed (knots) |
 | `gs_mps` | `float` | Raw Value |
 | `lat` | `float` | Latitude (deg) |
 | `lon` | `float` | Longitude (deg) |
@@ -196,18 +154,6 @@
 | `track` | `integer` | Heading/Track (deg) |
 | `value` | `integer` | Raw Value |
 | `vr_mps` | `float` | Raw Value |
-
----
-## `global_truth`
-### 🏷️ Tags (Indexed)
-| Tag Key | Description |
-| :--- | :--- |
-| `source` | Metadata |
-
-### 🔢 Fields (Metrics)
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `aircraft_count` | `integer` | Active Aircraft Count |
 
 ---
 ## `gps_data`
@@ -243,6 +189,7 @@
 | Tag Key | Description |
 | :--- | :--- |
 | `host` | Sensor Identity |
+| `mode` | Metadata |
 
 ### 🔢 Fields (Metrics)
 | Field Key | Type | Description |
@@ -280,20 +227,6 @@
 | `track` | `float` | Heading/Track (deg) |
 
 ---
-## `integrity_check`
-### 🏷️ Tags (Indexed)
-| Tag Key | Description |
-| :--- | :--- |
-| `icao` | Aircraft Hex ID |
-
-### 🔢 Fields (Metrics)
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `is_spoofed` | `integer` | Spoofing Flag (0=OK, 1=WARN) |
-| `lat_error` | `float` | Raw Value |
-| `lon_error` | `float` | Raw Value |
-
----
 ## `local_aircraft_state`
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
@@ -306,13 +239,34 @@
 ### 🔢 Fields (Metrics)
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
+| `adsb_version` | `integer` | Raw Value |
+| `alert` | `integer` | Raw Value |
 | `alt_baro_ft` | `integer` | Barometric Altitude (ft) |
+| `alt_geom_ft` | `integer` | Raw Value |
+| `category` | `string` | Raw Value |
+| `emergency` | `string` | Raw Value |
+| `geom_rate_fpm` | `integer` | Raw Value |
 | `gs_knots` | `float` | Ground Speed (knots) |
 | `lat` | `float` | Latitude (deg) |
 | `lon` | `float` | Longitude (deg) |
+| `msg_count` | `integer` | Count |
+| `nac_p` | `integer` | Raw Value |
+| `nac_v` | `integer` | Raw Value |
+| `nav_altitude_mcp_ft` | `integer` | Raw Value |
+| `nav_heading` | `float` | Raw Value |
+| `nav_qnh` | `float` | Raw Value |
+| `nic` | `integer` | Raw Value |
 | `origin_data` | `string` | Raw Value |
+| `rc` | `integer` | Raw Value |
+| `rssi` | `float` | Signal Strength (dB) |
+| `seen_seconds` | `float` | Raw Value |
+| `sil` | `integer` | Raw Value |
+| `spi` | `integer` | Raw Value |
+| `squawk` | `string` | Raw Value |
 | `track` | `float` | Heading/Track (deg) |
 | `v_rate_fpm` | `integer` | Raw Value |
+| `vert_rate` | `integer` | Vertical Rate (fpm) |
+| `vert_rate_fpm` | `integer` | Raw Value |
 
 ---
 ## `local_performance`
@@ -320,17 +274,25 @@
 | Tag Key | Description |
 | :--- | :--- |
 | `host` | Sensor Identity |
-| `lat` | Metadata |
-| `lon` | Metadata |
+| `source` | Metadata |
 
 ### 🔢 Fields (Metrics)
 | Field Key | Type | Description |
 | :--- | :--- | :--- |
 | `airborne_msg` | `integer` | Raw Value |
+| `aircraft_with_pos` | `integer` | Raw Value |
+| `aircraft_without_pos` | `integer` | Raw Value |
+| `cpu_load_ms` | `integer` | Raw Value |
 | `cpu_sec` | `float` | Raw Value |
+| `max_range_meters` | `float` | Raw Value |
 | `messages` | `integer` | Total Messages Processed |
+| `messages_last1min` | `integer` | Raw Value |
+| `messages_total_lifetime` | `float` | Raw Value |
 | `messages_total_lifetime` | `integer` | Raw Value |
+| `positions_last1min` | `integer` | Raw Value |
+| `remote_bytes_in` | `integer` | Raw Value |
 | `signal_db` | `float` | Signal Strength (dB) |
+| `strong_signals` | `float` | Count of Strong Signals (> -3dB) |
 | `strong_signals` | `integer` | Count of Strong Signals (> -3dB) |
 
 ---
@@ -338,11 +300,15 @@
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
 | :--- | :--- |
+| `fleet_role` | Metadata |
 | `gnss_type` | Metadata |
 | `host` | Sensor Identity |
+| `lat` | Metadata |
 | `location` | Metadata |
+| `lon` | Metadata |
 | `placement` | Metadata |
 | `role` | Node Role (Anchor/Scout) |
+| `sensor_id` | Metadata |
 | `sensor_role` | Metadata |
 
 ### 🔢 Fields (Metrics)
@@ -400,37 +366,6 @@
 | `severity` | `float` | Raw Value |
 | `value` | `float` | Raw Value |
 | `violation` | `string` | Raw Value |
-
----
-## `readsb`
-### 🏷️ Tags (Indexed)
-| Tag Key | Description |
-| :--- | :--- |
-| `host` | Sensor Identity |
-
-### 🔢 Fields (Metrics)
-| Field Key | Type | Description |
-| :--- | :--- | :--- |
-| `cpr_airborne` | `float` | CPR Airborne Pos Messages |
-| `cpr_global_bad` | `float` | Raw Value |
-| `cpr_global_ok` | `float` | Global CPR Decodes (Success) |
-| `cpr_global_skipped` | `float` | Raw Value |
-| `cpr_global_speed` | `float` | Raw Value |
-| `cpr_local_aircraft_relative` | `float` | Raw Value |
-| `cpr_local_ok` | `float` | Local CPR Decodes (Success) |
-| `cpr_local_range` | `float` | Raw Value |
-| `cpr_local_skipped` | `float` | Raw Value |
-| `cpr_local_speed` | `float` | Raw Value |
-| `cpr_surface` | `float` | CPR Surface Pos Messages |
-| `cpu_background` | `float` | Demodulator CPU Usage (%) |
-| `messages` | `float` | Total Messages Processed |
-| `remote_accepted` | `float` | Messages Accepted from Net |
-| `remote_modeac` | `float` | Raw Value |
-| `remote_modes` | `float` | Raw Value |
-| `remote_unknown_icao` | `float` | Raw Value |
-| `tracks_new` | `float` | New Tracks Created |
-| `tracks_single_message` | `float` | Raw Value |
-| `tracks_with_position` | `float` | Tracks with Valid Position |
 
 ---
 ## `rf_battle_stats`
@@ -497,10 +432,15 @@
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
 | :--- | :--- |
+| `fleet_role` | Metadata |
 | `gnss_type` | Metadata |
 | `host` | Sensor Identity |
+| `lat` | Metadata |
 | `location` | Metadata |
+| `lon` | Metadata |
 | `placement` | Metadata |
+| `role` | Node Role (Anchor/Scout) |
+| `sensor_id` | Metadata |
 | `sensor_role` | Metadata |
 
 ### 🔢 Fields (Metrics)
@@ -510,6 +450,7 @@
 | `load15` | `float` | System Load (15 min avg) |
 | `load5` | `float` | System Load (5 min avg) |
 | `n_cpus` | `integer` | Raw Value |
+| `n_physical_cpus` | `integer` | Raw Value |
 | `uptime` | `integer` | System Uptime (seconds) |
 | `uptime_format` | `string` | Raw Value |
 
@@ -518,7 +459,6 @@
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
 | :--- | :--- |
-| `cpu_model` | Metadata |
 | `host` | Sensor Identity |
 | `placement` | Metadata |
 | `role` | Node Role (Anchor/Scout) |
@@ -537,11 +477,16 @@
 ### 🏷️ Tags (Indexed)
 | Tag Key | Description |
 | :--- | :--- |
+| `fleet_role` | Metadata |
 | `gnss_type` | Metadata |
 | `host` | Sensor Identity |
+| `lat` | Metadata |
 | `location` | Metadata |
+| `lon` | Metadata |
 | `placement` | Metadata |
+| `role` | Node Role (Anchor/Scout) |
 | `sensor` | Metadata |
+| `sensor_id` | Metadata |
 | `sensor_role` | Metadata |
 
 ### 🔢 Fields (Metrics)

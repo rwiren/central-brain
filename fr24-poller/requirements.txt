@@ -1,2 +1,2 @@
-requests
-influxdb
+requests==2.31.0
+influxdb==5.3.1

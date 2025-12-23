@@ -1,4 +1,2 @@
-influxdb
-paho-mqtt<2.0.0
-requests
-geopy
+influxdb==5.3.1
+requests==2.31.0

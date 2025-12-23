@@ -1,0 +1,346 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "panels": [],
+      "title": "\ud83c\udfc6 The Scoreboard (Hardcoded)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "alias": "Office Range",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT last(\"max_range_nm\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-office' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_range_nm"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ]
+        },
+        {
+          "alias": "Balcony Range",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT last(\"max_range_nm\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-balcony' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_range_nm"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ]
+        }
+      ],
+      "title": "\ud83d\udce1 Max Range (NM)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "Count",
+            "drawStyle": "bars",
+            "fillOpacity": 80
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "id": 2,
+      "targets": [
+        {
+          "alias": "Office Ground",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT last(\"ground_count\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-office' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "ground_count"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ]
+        },
+        {
+          "alias": "Balcony Ground",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT last(\"ground_count\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-balcony' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "ground_count"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ]
+        }
+      ],
+      "title": "\ud83d\ude9c Ground Traffic",
+      "type": "barchart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 12,
+      "panels": [],
+      "title": "\ud83d\udcc8 Live Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisLabel": "Range (NM)",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "lengthnm"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 5,
+      "targets": [
+        {
+          "alias": "Office (Ref)",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT mean(\"max_range_nm\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-office' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_range_nm"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        },
+        {
+          "alias": "Balcony (Scout)",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            }
+          ],
+          "measurement": "rf_battle_stats",
+          "query": "SELECT mean(\"max_range_nm\") FROM \"rf_battle_stats\" WHERE \"host\" = 'keimola-balcony' AND $timeFilter GROUP BY time($__interval)",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_range_nm"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ]
+        }
+      ],
+      "title": "\ud83d\udd2d Max Range History",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [
+    "keimola",
+    "battle",
+    "hardcoded"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "InfluxDB",
+          "value": "InfluxDB"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "title": "Keimola Grid: RF Battle (Hardcoded)",
+  "uid": "keimola_rf_battle_v3",
+  "version": 3
+}
