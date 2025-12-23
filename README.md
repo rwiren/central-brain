@@ -373,7 +373,6 @@ This sensor node contributes data to global networks, allowing us to validate ou
 | Network | Station ID | Status |
 | :--- | :--- | :--- |
 | **AirNav Radar (office)** | [EXTRPI688862](https://www.airnavradar.com/stations/EXTRPI688862) | 🟢 Active |
-| **AirNav Radar (balcony)** | [EXTRPI692312](https://www.airnavradar.com/stations/EXTRPI692312) | 🟢 Active |
 | **PlaneFinder (office)**| [Receiver 235846](https://planefinder.net/coverage/receiver/235846) | 🟢 Active |
 | **PlaneFinder (balcony)** | [Receiver 235915](https://planefinder.net/coverage/receiver/235915) | 🟢 Active |
 | **FlightAware** | [User: rwiren2](https://www.flightaware.com/adsb/stats/user/rwiren2) | 🟢 Active |
