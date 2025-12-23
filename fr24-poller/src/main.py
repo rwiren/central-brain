@@ -18,7 +18,7 @@ from datetime import datetime
 
 # ---------------- CONFIGURATION ----------------
 # Use environment variable if available, otherwise fallback to the known token
-TOKEN = os.getenv("FR24_TOKEN", "019ad149-f995-70d9-a6f5-ad165a1853a3|UAbRqScsW2S6Iz9HT3R6yARMjUW0L8tVkx9hYHuae0206acb")
+TOKEN = os.getenv("FR24_TOKEN", "Your-TOKEN-HERE")
 
 # Endpoint for full flight positions
 URL = "https://fr24api.flightradar24.com/api/live/flight-positions/full"
