@@ -12,6 +12,14 @@
 
 ---
 
+# ⚠️ ARCHIVED: Project Moved to `adsb-research-grid`
+
+> **Status:** 🔴 **Deprecated / Read-Only**
+> **Successor:** [rwiren/adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
+> **Reason:** Architecture upgraded to "Next Level" (Hybrid Cloud/Edge + Ansible Automation).
+
+---
+
 ### 📋 Table of Contents
 - [Project Overview](#project-overview)
 - [Hardware Architecture](#hardware-architecture)
