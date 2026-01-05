@@ -12,7 +12,7 @@
 
 ---
 
-# ⚠️ ARCHIVED: Project Moved to `adsb-research-grid`
+# ⚠️ ARCHIVED
 
 > **Status:** 🔴 **Deprecated / Read-Only**
 
