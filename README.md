@@ -10,7 +10,7 @@
 
 # Secure Skies: ADS-B Integrity & Spoofing Detection (Legacy)
 
-![Status](https://img.shields.io/badge/Status-Archived-red?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Archived-red)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
