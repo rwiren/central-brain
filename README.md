@@ -2,33 +2,26 @@
 
 **This repository has been superseded.**
 
-Active development has moved to: [adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
+🚀 **Active development has moved to:** [adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
 
-Please update your bookmarks and clones.
+> **Note:** The theoretical frameworks, mathematical models, and spoofing detection methodologies documented in the [Project Wiki](https://github.com/rwiren/central-brain/wiki) **remain valid** and serve as the scientific foundation for the new grid architecture.
 
 ---
 
-# Secure Skies: ADS-B Integrity & Spoofing Detection
+# Secure Skies: ADS-B Integrity & Spoofing Detection (Legacy)
 
-![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Archived-red?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/Platform-BalenaOS-blue?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11-yellow?style=flat-square)
 [![Wiki](https://img.shields.io/badge/Docs-Project%20Wiki-purple?style=flat-square)](https://github.com/rwiren/central-brain/wiki)
 ![Last Updated](https://img.shields.io/github/last-commit/rwiren/central-brain?label=Last%20Updated&color=orange)
 
-**Location:** HEL-ARN Corridor (Focus: EFHK)  
+**Location:** HEL-ARN Corridor (Focus: EFHK)  
 **Author:** RW
 
----
-
-# ⚠️ ARCHIVED
-
-> **Status:** 🔴 **Deprecated / Read-Only**
-
-> **Successor:** [adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
-
-> **Reason:** Architecture upgraded to "Next Level" (Hybrid Cloud/Edge + Ansible Automation).
+### 🛑 Repository Status: Read-Only
+This code is no longer maintained. Please refer to the successor repository linked above for the latest Ansible-based grid implementation.
 
 ---
 
