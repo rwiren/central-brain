@@ -1,3 +1,13 @@
+# ⚠️ DEPRECATED
+
+**This repository has been superseded.**
+
+Active development has moved to: [adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
+
+Please update your bookmarks and clones.
+
+---
+
 # Secure Skies: ADS-B Integrity & Spoofing Detection
 
 ![Status](https://img.shields.io/badge/Status-Active_Monitoring-green?style=flat-square)
