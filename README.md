@@ -26,7 +26,7 @@ Please update your bookmarks and clones.
 
 > **Status:** 🔴 **Deprecated / Read-Only**
 
-> **Successor:** TBA
+> **Successor:** [adsb-research-grid](https://github.com/rwiren/adsb-research-grid)
 
 > **Reason:** Architecture upgraded to "Next Level" (Hybrid Cloud/Edge + Ansible Automation).
 
