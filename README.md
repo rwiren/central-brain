@@ -383,15 +383,6 @@ The relocation from indoor office "energy efficient window" to outdoor balcony d
 ## <a name="global-validation"></a>🌐 Global Validation
 This sensor node contributes data to global networks, allowing us to validate our local findings against community data (I added another rpi4 sensor node for testing also on the balcony, however my plan is move it to another location soon.)
 
-| Network | Station ID | Status |
-| :--- | :--- | :--- |
-| **AirNav Radar (office)** | [EXTRPI688862](https://www.airnavradar.com/stations/EXTRPI688862) | 🟢 Active |
-| **PlaneFinder (office)**| [Receiver 235846](https://planefinder.net/coverage/receiver/235846) | 🟢 Active |
-| **PlaneFinder (balcony)** | [Receiver 235915](https://planefinder.net/coverage/receiver/235915) | 🟢 Active |
-| **FlightAware** | [User: rwiren2](https://www.flightaware.com/adsb/stats/user/rwiren2) | 🟢 Active |
-| **FlightRadar24 (office)**| [Feed ID: 72235](https://www.flightradar24.com/account/feed-stats/?id=72235) | 🟢 Active |
-| **FlightRadar24 (balcony)** | [Feed ID: 72866](https://www.flightradar24.com/account/feed-stats/?id=72866) | 🟢 Active |
-
 ---
 
 ## <a name="structure"></a>📂 Repository Structure
